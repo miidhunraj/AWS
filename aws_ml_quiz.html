@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Knowledge Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a28;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f59e0b;
+    --correct: #10b981;
+    --wrong: #ef4444;
+    --text: #f0f0ff;
+    --muted: #6b7280;
+    --border: rgba(124,58,237,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(124,58,237,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 80% 80%, rgba(6,182,212,0.09) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SCREEN BASE */
+  .screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  .screen.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ── HERO ── */
+  #hero { gap: 32px; text-align: center; }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: #a78bfa;
+    text-transform: uppercase;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 8vw, 80px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 380px;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat-chip {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    text-align: center;
+  }
+  .stat-chip .num {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--accent2);
+  }
+  .stat-chip .lbl {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* SECTION SELECT */
+  .section-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding: 4px 2px;
+  }
+  .section-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .section-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .section-card:hover::before { opacity: 1; }
+  .section-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .section-card.selected { border-color: var(--accent); background: rgba(124,58,237,0.18); }
+  .section-card .sec-num {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .section-card .sec-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .section-card .sec-count {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #5b21b6);
+    color: #fff;
+    box-shadow: 0 0 24px rgba(124,58,237,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(124,58,237,0.6); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── QUIZ ── */
+  #quiz {
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+
+  .quiz-header {
+    width: 100%;
+    max-width: 720px;
+    padding: 20px 24px 0;
+    margin: 0 auto;
+    flex-shrink: 0;
+  }
+
+  .quiz-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .q-counter {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .q-counter span { color: var(--text); }
+
+  .progress-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  .score-live {
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .score-live span { color: var(--accent3); font-weight: 700; }
+
+  .quiz-body {
+    width: 100%;
+    max-width: 720px;
+    padding: 24px;
+    margin: 0 auto;
+    flex: 1;
+  }
+
+  .question-num {
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .question-text {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 28px;
+    color: #fff;
+  }
+
+  .options-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .option-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: left;
+    width: 100%;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent2);
+    background: rgba(6,182,212,0.08);
+    transform: translateX(4px);
+  }
+  .option-letter {
+    min-width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .option-btn.correct {
+    border-color: var(--correct);
+    background: rgba(16,185,129,0.12);
+    animation: pulse-correct 0.4s ease;
+  }
+  .option-btn.correct .option-letter {
+    background: var(--correct);
+    border-color: var(--correct);
+    color: #fff;
+  }
+  .option-btn.wrong {
+    border-color: var(--wrong);
+    background: rgba(239,68,68,0.12);
+    animation: shake 0.3s ease;
+  }
+  .option-btn.wrong .option-letter {
+    background: var(--wrong);
+    border-color: var(--wrong);
+    color: #fff;
+  }
+  .option-btn:disabled { cursor: default; }
+
+  @keyframes pulse-correct {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.01); }
+    100% { transform: scale(1); }
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .feedback-bar {
+    margin-top: 20px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 13px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .feedback-bar.show { display: flex; }
+  .feedback-bar.correct-fb { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+  .feedback-bar.wrong-fb { background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+
+  .next-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-bottom: 32px;
+  }
+
+  /* ── RESULTS ── */
+  #results { gap: 28px; text-align: center; }
+
+  .result-ring {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto;
+  }
+  .result-ring svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 10; }
+  .ring-fill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
+  }
+  .ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+  .ring-pct {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+  }
+  .ring-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  .result-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(22px, 5vw, 40px);
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .result-breakdown {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .breakdown-chip {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 22px;
+    text-align: center;
+    min-width: 90px;
+  }
+  .breakdown-chip .bnum {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .breakdown-chip .blbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+  .bnum.c { color: var(--correct); }
+  .bnum.w { color: var(--wrong); }
+  .bnum.t { color: var(--accent2); }
+
+  .grade-badge {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 100px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+  }
+
+  .result-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 99px; }
+
+  /* section select screen */
+  #select { gap: 24px; justify-content: flex-start; padding-top: 48px; overflow-y: auto; }
+  .select-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    text-align: center;
+  }
+  .select-sub { font-size: 12px; color: var(--muted); text-align: center; }
+  .select-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  /* floating particles */
+  .particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0;
+    animation: float-up var(--dur) linear var(--delay) infinite;
+  }
+  @keyframes float-up {
+    0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.3; }
+    100% { transform: translateY(-10vh) translateX(var(--drift)); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<!-- HERO -->
+<div class="screen active" id="hero">
+  <div class="hero-badge">⚡ AWS ML Quiz</div>
+  <h1 class="hero-title">ML<br>KNOWLEDGE<br>QUEST</h1>
+  <p class="hero-sub">Test your Machine Learning knowledge across 8 sections — from basics to NLP, RL, and beyond.</p>
+  <div class="stats-row">
+    <div class="stat-chip"><div class="num">90+</div><div class="lbl">Questions</div></div>
+    <div class="stat-chip"><div class="num">8</div><div class="lbl">Sections</div></div>
+    <div class="stat-chip"><div class="num">MCQ</div><div class="lbl">Format</div></div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+    <button class="btn btn-primary" onclick="showSelect()">▶ Choose Sections</button>
+    <button class="btn btn-ghost" onclick="startAll()">Play All Questions</button>
+  </div>
+</div>
+
+<!-- SECTION SELECT -->
+<div class="screen" id="select">
+  <div class="select-title">Choose Your Sections</div>
+  <p class="select-sub">Select one or more sections to quiz yourself on</p>
+  <div class="section-grid" id="sectionGrid"></div>
+  <div class="select-actions">
+    <button class="btn btn-ghost" onclick="toggleAll()">Toggle All</button>
+    <button class="btn btn-primary" onclick="startSelected()">▶ Start Quiz</button>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="quiz">
+  <div class="quiz-header">
+    <div class="quiz-meta">
+      <div class="section-label" id="sectionLabel"></div>
+      <div class="q-counter">Q <span id="qNum">1</span> / <span id="qTotal">10</span></div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="score-live">Score: <span id="liveScore">0</span></div>
+  </div>
+  <div class="quiz-body">
+    <div class="question-num" id="questionNum"></div>
+    <div class="question-text" id="questionText"></div>
+    <div class="options-grid" id="optionsGrid"></div>
+    <div class="feedback-bar" id="feedbackBar"></div>
+    <div class="next-row">
+      <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()" style="display:none;">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="results">
+  <div class="result-ring">
+    <svg viewBox="0 0 160 160" width="160" height="160">
+      <circle class="ring-bg" cx="80" cy="80" r="70"/>
+      <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="70"
+        stroke-dasharray="439.8" stroke-dashoffset="439.8"/>
+    </svg>
+    <div class="ring-text">
+      <div class="ring-pct" id="ringPct">0%</div>
+      <div class="ring-lbl">Score</div>
+    </div>
+  </div>
+  <div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="grade-badge" id="gradeBadge" style="margin-top:8px;"></div>
+  </div>
+  <div class="result-breakdown">
+    <div class="breakdown-chip"><div class="bnum c" id="resCorrect">0</div><div class="blbl">Correct</div></div>
+    <div class="breakdown-chip"><div class="bnum w" id="resWrong">0</div><div class="blbl">Wrong</div></div>
+    <div class="breakdown-chip"><div class="bnum t" id="resTotal">0</div><div class="blbl">Total</div></div>
+  </div>
+  <div class="result-btns">
+    <button class="btn btn-primary" onclick="restartSame()">↺ Retry</button>
+    <button class="btn btn-ghost" onclick="showSelect()">Choose Sections</button>
+    <button class="btn btn-ghost" onclick="showScreen('hero')">🏠 Home</button>
+  </div>
+</div>
+
+<script>
+const ALL_QUESTIONS = [
+  // Section 1 — Intro to ML (1–20)
+  {s:"Intro to ML",q:"What is Machine Learning?",o:["Programming hardware","Teaching computers to learn from data","Writing manual algorithms","Computer networking"],a:1},
+  {s:"Intro to ML",q:"Machine learning is a subset of:",o:["Cloud computing","Artificial Intelligence","Networking","Cyber security"],a:1},
+  {s:"Intro to ML",q:"Which of the following is NOT a type of ML?",o:["Supervised Learning","Unsupervised Learning","Reinforcement Learning","Manual Learning"],a:3},
+  {s:"Intro to ML",q:"Data used to train a model is called:",o:["Test data","Training data","Random data","Input layer"],a:1},
+  {s:"Intro to ML",q:"The output variable in ML is called:",o:["Feature","Label","Dataset","Instance"],a:1},
+  {s:"Intro to ML",q:"Features are also called:",o:["Labels","Variables","Inputs","Both B and C"],a:3},
+  {s:"Intro to ML",q:"A dataset is:",o:["Collection of data points","A single value","A program","A server"],a:0},
+  {s:"Intro to ML",q:"ML models learn patterns from:",o:["Hardware","Data","Internet","Database only"],a:1},
+  {s:"Intro to ML",q:"Predicting house prices is an example of:",o:["Classification","Regression","Clustering","Reinforcement"],a:1},
+  {s:"Intro to ML",q:"Spam email detection is an example of:",o:["Regression","Clustering","Classification","Dimensionality reduction"],a:2},
+  {s:"Intro to ML",q:"ML is widely used in:",o:["Netflix recommendations","Fraud detection","Voice assistants","All of the above"],a:3},
+  {s:"Intro to ML",q:"Data preprocessing is used for:",o:["Cleaning data","Improving model performance","Removing errors","All of the above"],a:3},
+  {s:"Intro to ML",q:"A model is:",o:["Mathematical representation of a problem","A database","A hardware device","A programming language"],a:0},
+  {s:"Intro to ML",q:"Training means:",o:["Teaching model using data","Running hardware","Coding manually","Data storage"],a:0},
+  {s:"Intro to ML",q:"Testing data is used for:",o:["Training model","Evaluating model","Deleting data","Storing data"],a:1},
+  {s:"Intro to ML",q:"Machine learning requires:",o:["Data","Algorithms","Computing power","All of the above"],a:3},
+  {s:"Intro to ML",q:"Which language is popular for ML?",o:["Python","C","HTML","PHP"],a:0},
+  {s:"Intro to ML",q:"ML models improve by:",o:["Learning from more data","Changing hardware","Restarting system","Deleting data"],a:0},
+  {s:"Intro to ML",q:"Dataset rows represent:",o:["Features","Observations","Labels","Algorithms"],a:1},
+  {s:"Intro to ML",q:"Dataset columns represent:",o:["Observations","Features","Servers","Networks"],a:1},
+
+  // Section 2 — Supervised Learning (21–45)
+  {s:"Supervised Learning",q:"Supervised learning uses:",o:["Labeled data","Unlabeled data","Random data","Noise"],a:0},
+  {s:"Supervised Learning",q:"Linear Regression predicts:",o:["Continuous values","Categories","Clusters","Networks"],a:0},
+  {s:"Supervised Learning",q:"Logistic Regression is used for:",o:["Regression","Classification","Clustering","NLP"],a:1},
+  {s:"Supervised Learning",q:"Decision Trees are used for:",o:["Classification and regression","Networking","Hardware","Storage"],a:0},
+  {s:"Supervised Learning",q:"Random Forest is:",o:["Single decision tree","Collection of trees","Clustering model","NLP model"],a:1},
+  {s:"Supervised Learning",q:"Overfitting occurs when:",o:["Model learns noise","Model underperforms","Model learns patterns","Model deletes data"],a:0},
+  {s:"Supervised Learning",q:"Underfitting occurs when:",o:["Model too simple","Model too complex","Model perfect","Model trained well"],a:0},
+  {s:"Supervised Learning",q:"Training accuracy measures:",o:["Model performance on training data","Internet speed","Memory usage","CPU usage"],a:0},
+  {s:"Supervised Learning",q:"Confusion matrix is used for:",o:["Regression evaluation","Classification evaluation","Clustering evaluation","Networking"],a:1},
+  {s:"Supervised Learning",q:"Precision measures:",o:["Correct positive predictions","Wrong predictions","Total predictions","Negative predictions"],a:0},
+  {s:"Supervised Learning",q:"Recall measures:",o:["True positives detected","False positives","Total predictions","Model size"],a:0},
+  {s:"Supervised Learning",q:"Accuracy formula:",o:["Correct predictions / total predictions","Incorrect predictions / total","Data / features","Features / dataset"],a:0},
+  {s:"Supervised Learning",q:"Decision Trees split data based on:",o:["Features","Servers","Networks","Databases"],a:0},
+  {s:"Supervised Learning",q:"Random Forest reduces:",o:["Bias","Variance","Overfitting","Both B and C"],a:3},
+  {s:"Supervised Learning",q:"Logistic Regression uses:",o:["Sigmoid function","Linear function","Random function","Tree function"],a:0},
+
+  // Section 3 — Unsupervised Learning (46–65)
+  {s:"Unsupervised Learning",q:"Unsupervised learning uses:",o:["Labeled data","Unlabeled data","Structured labels","Predictions"],a:1},
+  {s:"Unsupervised Learning",q:"Clustering groups:",o:["Similar data points","Random data","Networks","Servers"],a:0},
+  {s:"Unsupervised Learning",q:"K-Means algorithm creates:",o:["K clusters","Random clusters","One cluster","Infinite clusters"],a:0},
+  {s:"Unsupervised Learning",q:"Hierarchical clustering forms:",o:["Tree structure","Graph","Matrix","List"],a:0},
+  {s:"Unsupervised Learning",q:"PCA is used for:",o:["Classification","Dimensionality reduction","Clustering","Regression"],a:1},
+  {s:"Unsupervised Learning",q:"Dimensionality reduction reduces:",o:["Features","Observations","Labels","Networks"],a:0},
+  {s:"Unsupervised Learning",q:"t-SNE is mainly used for:",o:["Visualization","Regression","Classification","Networks"],a:0},
+  {s:"Unsupervised Learning",q:"Association rules find:",o:["Patterns in data","Predictions","Clusters","Servers"],a:0},
+  {s:"Unsupervised Learning",q:"Apriori algorithm is used for:",o:["Market basket analysis","Regression","NLP","Reinforcement learning"],a:0},
+  {s:"Unsupervised Learning",q:"Support measures:",o:["Frequency of itemset","Prediction accuracy","Error rate","Model size"],a:0},
+
+  // Section 4 — Overfitting & Model Tuning (66–85)
+  {s:"Overfitting & Model Tuning",q:"Regularization reduces:",o:["Overfitting","Underfitting","Data size","Clusters"],a:0},
+  {s:"Overfitting & Model Tuning",q:"L1 regularization is called:",o:["Ridge","Lasso","Elastic","Gradient"],a:1},
+  {s:"Overfitting & Model Tuning",q:"L2 regularization is called:",o:["Ridge","Lasso","Dropout","Sigmoid"],a:0},
+  {s:"Overfitting & Model Tuning",q:"Cross validation is used for:",o:["Model evaluation","Data cleaning","Storage","Networking"],a:0},
+  {s:"Overfitting & Model Tuning",q:"K-fold cross validation divides data into:",o:["K subsets","2 subsets","1 subset","Random clusters"],a:0},
+  {s:"Overfitting & Model Tuning",q:"Hyperparameters are:",o:["Model settings","Data values","Labels","Predictions"],a:0},
+
+  // Section 5 — Ensemble Learning (86–105)
+  {s:"Ensemble Learning",q:"Ensemble learning combines:",o:["Multiple models","Single model","Random models","Hardware"],a:0},
+  {s:"Ensemble Learning",q:"Bagging stands for:",o:["Bootstrap Aggregating","Balanced Grouping","Binary Aggregation","Basic Algorithm Group"],a:0},
+  {s:"Ensemble Learning",q:"Random Forest uses:",o:["Multiple decision trees","Neural networks","Regression only","Clustering only"],a:0},
+  {s:"Ensemble Learning",q:"Boosting improves:",o:["Weak learners","Data size","Hardware","Networks"],a:0},
+  {s:"Ensemble Learning",q:"AdaBoost stands for:",o:["Adaptive Boosting","Advanced Boosting","Automatic Boosting","Active Boosting"],a:0},
+
+  // Section 6 — Time Series (106–120)
+  {s:"Time Series Analysis",q:"Time series data is:",o:["Data over time","Random data","Image data","Text data"],a:0},
+  {s:"Time Series Analysis",q:"ARIMA stands for:",o:["AutoRegressive Integrated Moving Average","Automatic Random Model","Artificial Regression Model","Advanced Regression Model"],a:0},
+  {s:"Time Series Analysis",q:"Time series forecasting predicts:",o:["Future values","Past values","Clusters","Labels"],a:0},
+  {s:"Time Series Analysis",q:"Seasonality means:",o:["Periodic patterns","Random patterns","No patterns","Clusters"],a:0},
+
+  // Section 7 — Reinforcement Learning (121–130)
+  {s:"Reinforcement Learning",q:"Reinforcement learning uses:",o:["Rewards and penalties","Labels","Clusters","Features"],a:0},
+  {s:"Reinforcement Learning",q:"Agent interacts with:",o:["Environment","Dataset","Server","Network"],a:0},
+  {s:"Reinforcement Learning",q:"Q-learning is:",o:["Reinforcement learning algorithm","Clustering algorithm","Regression algorithm","NLP algorithm"],a:0},
+
+  // Section 8 — NLP (131–150)
+  {s:"NLP",q:"NLP stands for:",o:["Natural Language Processing","Neural Learning Processing","Network Language Programming","Natural Logic Programming"],a:0},
+  {s:"NLP",q:"Tokenization means:",o:["Splitting text into words","Removing words","Translating text","Predicting text"],a:0},
+  {s:"NLP",q:"Stemming reduces words to:",o:["Root form","Sentence form","Paragraph form","Cluster form"],a:0},
+  {s:"NLP",q:"TF-IDF is used for:",o:["Text vectorization","Clustering","Regression","Forecasting"],a:0},
+  {s:"NLP",q:"Sentiment analysis detects:",o:["Emotion in text","Image classification","Regression","Clustering"],a:0},
+  {s:"NLP",q:"Word embeddings convert:",o:["Words into vectors","Images into vectors","Audio into text","Data into clusters"],a:0},
+  {s:"NLP",q:"NLP is used in:",o:["Chatbots","Translation","Voice assistants","All of the above"],a:3},
+  {s:"NLP",q:"Bag of Words represents:",o:["Text frequency","Images","Audio","Networks"],a:0},
+  {s:"NLP",q:"Stop words are:",o:["Common words removed","Important words","Numbers","Symbols"],a:0},
+  {s:"NLP",q:"NLP models process:",o:["Text data","Image data","Video data","Network data"],a:0},
+  {s:"NLP",q:"Sentiment classes are:",o:["Positive","Negative","Neutral","All of the above"],a:3},
+  {s:"NLP",q:"ChatGPT uses:",o:["NLP","Networking","Clustering","Regression"],a:0},
+  {s:"NLP",q:"Named Entity Recognition identifies:",o:["Names of people and places","Images","Networks","Servers"],a:0},
+  {s:"NLP",q:"Language translation is an NLP task:",o:["True","False"],a:0},
+  {s:"NLP",q:"Word2Vec is used for:",o:["Word embeddings","Clustering","Regression","Forecasting"],a:0},
+  {s:"NLP",q:"NLP datasets include:",o:["Text","Sentences","Documents","All of the above"],a:3},
+  {s:"NLP",q:"Text classification predicts:",o:["Category of text","Images","Videos","Networks"],a:0},
+  {s:"NLP",q:"Email spam detection uses:",o:["NLP","Clustering","Regression","Hardware"],a:0},
+  {s:"NLP",q:"Text preprocessing improves:",o:["Model performance","Hardware speed","Network speed","Storage"],a:0},
+  {s:"NLP",q:"NLP is widely used in:",o:["Search engines","Chatbots","Recommendation systems","All of the above"],a:3},
+];
+
+const SECTIONS = [...new Set(ALL_QUESTIONS.map(q => q.s))];
+
+let currentQuestions = [];
+let currentIdx = 0;
+let score = 0;
+let answered = false;
+
+// ── particles ──
+(function(){
+  const container = document.getElementById('particles');
+  for(let i=0;i<25;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `left:${Math.random()*100}%;--dur:${8+Math.random()*14}s;--delay:${Math.random()*10}s;--drift:${(Math.random()-0.5)*80}px;background:${Math.random()<0.5?'#7c3aed':'#06b6d4'};opacity:0;`;
+    container.appendChild(p);
+  }
+})();
+
+// ── Section grid ──
+function buildSectionGrid(){
+  const grid = document.getElementById('sectionGrid');
+  grid.innerHTML = '';
+  SECTIONS.forEach((sec,i)=>{
+    const count = ALL_QUESTIONS.filter(q=>q.s===sec).length;
+    const card = document.createElement('div');
+    card.className = 'section-card selected';
+    card.dataset.sec = sec;
+    card.onclick = ()=>card.classList.toggle('selected');
+    card.innerHTML = `<div class="sec-num">Section ${i+1}</div><div class="sec-name">${sec}</div><div class="sec-count">${count} questions</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function toggleAll(){
+  const cards = document.querySelectorAll('.section-card');
+  const allSelected = [...cards].every(c=>c.classList.contains('selected'));
+  cards.forEach(c=>allSelected?c.classList.remove('selected'):c.classList.add('selected'));
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showSelect(){
+  buildSectionGrid();
+  showScreen('select');
+}
+
+function startAll(){
+  currentQuestions = shuffle([...ALL_QUESTIONS]);
+  beginQuiz();
+}
+
+function startSelected(){
+  const selected = [...document.querySelectorAll('.section-card.selected')].map(c=>c.dataset.sec);
+  if(!selected.length){ alert('Please select at least one section!'); return; }
+  currentQuestions = shuffle(ALL_QUESTIONS.filter(q=>selected.includes(q.s)));
+  beginQuiz();
+}
+
+function beginQuiz(){
+  currentIdx = 0; score = 0;
+  showScreen('quiz');
+  renderQuestion();
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function renderQuestion(){
+  const q = currentQuestions[currentIdx];
+  answered = false;
+
+  document.getElementById('sectionLabel').textContent = q.s;
+  document.getElementById('qNum').textContent = currentIdx+1;
+  document.getElementById('qTotal').textContent = currentQuestions.length;
+  document.getElementById('liveScore').textContent = score;
+  document.getElementById('questionNum').textContent = `Question ${currentIdx+1}`;
+  document.getElementById('questionText').textContent = q.q;
+  document.getElementById('progressFill').style.width = `${(currentIdx/currentQuestions.length)*100}%`;
+  document.getElementById('nextBtn').style.display = 'none';
+
+  const fb = document.getElementById('feedbackBar');
+  fb.className = 'feedback-bar';
+  fb.textContent = '';
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  q.o.forEach((opt,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${letters[i]}</span><span>${opt}</span>`;
+    btn.onclick = ()=>selectAnswer(i,q.a,q.o[q.a]);
+    grid.appendChild(btn);
+  });
+}
+
+function selectAnswer(chosen, correct, correctText){
+  if(answered) return;
+  answered = true;
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b=>b.disabled=true);
+
+  const fb = document.getElementById('feedbackBar');
+  if(chosen===correct){
+    score++;
+    btns[chosen].classList.add('correct');
+    fb.className = 'feedback-bar correct-fb show';
+    fb.innerHTML = '✓ Correct! Well done.';
+  } else {
+    btns[chosen].classList.add('wrong');
+    btns[correct].classList.add('correct');
+    fb.className = 'feedback-bar wrong-fb show';
+    fb.innerHTML = `✗ Wrong. Correct answer: <strong>${correctText}</strong>`;
+  }
+
+  document.getElementById('liveScore').textContent = score;
+  document.getElementById('nextBtn').style.display = 'inline-flex';
+}
+
+function nextQuestion(){
+  currentIdx++;
+  if(currentIdx >= currentQuestions.length){ showResults(); return; }
+  renderQuestion();
+}
+
+function showResults(){
+  showScreen('results');
+  const total = currentQuestions.length;
+  const pct = Math.round((score/total)*100);
+
+  document.getElementById('resCorrect').textContent = score;
+  document.getElementById('resWrong').textContent = total-score;
+  document.getElementById('resTotal').textContent = total;
+  document.getElementById('ringPct').textContent = pct+'%';
+
+  // Ring animation
+  const circumference = 2*Math.PI*70; // 439.8
+  const ring = document.getElementById('ringFill');
+  const colors = pct>=80?['#10b981','#06b6d4']:pct>=50?['#f59e0b','#fbbf24']:['#ef4444','#f87171'];
+  ring.style.stroke = `url(#rg)`;
+
+  // Create gradient dynamically
+  let svg = ring.closest('svg');
+  let defs = svg.querySelector('defs');
+  if(!defs){ defs=document.createElementNS('http://www.w3.org/2000/svg','defs'); svg.prepend(defs); }
+  defs.innerHTML = `<linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:${colors[0]}"/><stop offset="100%" style="stop-color:${colors[1]}"/></linearGradient>`;
+
+  ring.style.stroke = 'url(#rg)';
+  setTimeout(()=>{
+    ring.style.strokeDashoffset = circumference*(1-pct/100);
+  },100);
+
+  // Grade
+  let grade, title, color;
+  if(pct>=90){ grade='S'; title='Outstanding!'; color='#f59e0b'; }
+  else if(pct>=80){ grade='A'; title='Excellent Work!'; color='#10b981'; }
+  else if(pct>=70){ grade='B'; title='Good Job!'; color='#06b6d4'; }
+  else if(pct>=60){ grade='C'; title='Not Bad!'; color='#a78bfa'; }
+  else if(pct>=50){ grade='D'; title='Keep Practicing!'; color='#f59e0b'; }
+  else { grade='F'; title='Keep Studying!'; color='#ef4444'; }
+
+  document.getElementById('resultTitle').textContent = title;
+  const badge = document.getElementById('gradeBadge');
+  badge.textContent = `Grade: ${grade}`;
+  badge.style.background = color+'22';
+  badge.style.border = `1px solid ${color}44`;
+  badge.style.color = color;
+}
+
+function restartSame(){
+  currentQuestions = shuffle([...currentQuestions]);
+  beginQuiz();
+}
+</script>
+</body>
+</html>
