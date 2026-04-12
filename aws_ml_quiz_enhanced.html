@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Knowledge Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07070f;
+    --surface: #0e0e1a;
+    --card: #13131f;
+    --card-hover: #191927;
+    --accent: #8b5cf6;
+    --accent-dim: rgba(139,92,246,0.18);
+    --accent2: #22d3ee;
+    --accent2-dim: rgba(34,211,238,0.12);
+    --accent3: #f59e0b;
+    --correct: #10b981;
+    --wrong: #f43f5e;
+    --text: #eeeeff;
+    --text-dim: #9ca3af;
+    --border: rgba(139,92,246,0.2);
+    --border-soft: rgba(255,255,255,0.05);
+    --glow: 0 0 40px rgba(139,92,246,0.15);
+  }
+  body.light {
+    --bg: #f3f3fa;
+    --surface: #ebebf5;
+    --card: #ffffff;
+    --card-hover: #f8f8ff;
+    --accent: #7c3aed;
+    --accent-dim: rgba(124,58,237,0.1);
+    --accent2: #0891b2;
+    --accent2-dim: rgba(8,145,178,0.1);
+    --accent3: #d97706;
+    --correct: #059669;
+    --wrong: #e11d48;
+    --text: #18182e;
+    --text-dim: #6b7280;
+    --border: rgba(124,58,237,0.18);
+    --border-soft: rgba(0,0,0,0.06);
+    --glow: 0 0 40px rgba(124,58,237,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── ENCHANTED BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 15% 5%, rgba(139,92,246,0.1) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 85% 85%, rgba(34,211,238,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse 30% 30% at 50% 50%, rgba(139,92,246,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body.light::before { opacity: 0.5; }
+
+  /* Enchanted grid lines */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(139,92,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,92,246,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body.light::after { opacity: 0.6; }
+
+  .screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .screen.active { opacity: 1; pointer-events: all; }
+
+  /* ── THEME TOGGLE ── */
+  .theme-btn {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 100;
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  .theme-btn:hover { border-color: var(--accent); box-shadow: var(--glow); }
+
+  /* ── PARTICLES ── */
+  .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .particle {
+    position: absolute; border-radius: 50%; opacity: 0;
+    animation: float-up var(--dur) linear var(--delay) infinite;
+  }
+  @keyframes float-up {
+    0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+    10% { opacity: 0.5; }
+    90% { opacity: 0.2; }
+    100% { transform: translateY(-10vh) translateX(var(--drift)); opacity: 0; }
+  }
+
+  /* ── NAME INPUT ── */
+  #nameInput { gap: 0; }
+  .name-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 48px;
+    display: flex; flex-direction: column; align-items: center; gap: 22px;
+    width: 100%; max-width: 400px;
+    box-shadow: var(--glow);
+    position: relative; overflow: hidden;
+  }
+  .name-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(160deg, var(--accent-dim) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .name-icon { font-size: 40px; line-height: 1; }
+  .name-title {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text) 0%, #c4b5fd 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    text-align: center;
+  }
+  body.light .name-title { background: linear-gradient(135deg, var(--text) 0%, #7c3aed 100%); -webkit-background-clip: text; background-clip: text; }
+  .name-sub { font-size: 13px; color: var(--text-dim); text-align: center; line-height: 1.6; font-weight: 400; }
+  .avatar-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .avatar-opt {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: var(--surface); border: 2px solid transparent;
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s;
+  }
+  .avatar-opt:hover { border-color: var(--accent2); transform: scale(1.08); }
+  .avatar-opt.chosen { border-color: var(--accent); background: var(--accent-dim); }
+  .name-field {
+    width: 100%; background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 13px 16px;
+    color: var(--text); font-family: 'Outfit', sans-serif;
+    font-size: 15px; font-weight: 500; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+  }
+  .name-field::placeholder { color: var(--text-dim); font-weight: 400; }
+  .name-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
+
+  /* ── HERO ── */
+  #hero { gap: 28px; text-align: center; }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-dim); border: 1px solid var(--border);
+    border-radius: 100px; padding: 5px 16px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+    color: #c4b5fd; text-transform: uppercase;
+  }
+  body.light .hero-eyebrow { color: var(--accent); }
+  .hero-title {
+    font-size: clamp(40px, 9vw, 88px);
+    font-weight: 800; line-height: 0.92; letter-spacing: -0.03em;
+    background: linear-gradient(150deg, #fff 0%, #c4b5fd 40%, #22d3ee 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  body.light .hero-title {
+    background: linear-gradient(150deg, #1a1a2e 0%, #7c3aed 50%, #0891b2 100%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  .hero-sub { font-size: 14px; color: var(--text-dim); line-height: 1.7; max-width: 360px; font-weight: 400; }
+  .stats-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .stat-chip {
+    background: var(--card); border: 1px solid var(--border-soft);
+    border-radius: 16px; padding: 14px 22px; text-align: center;
+    transition: all 0.2s;
+  }
+  .stat-chip:hover { border-color: var(--border); box-shadow: var(--glow); }
+  .stat-chip .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px; font-weight: 700; color: var(--accent2);
+    letter-spacing: -0.02em;
+  }
+  .stat-chip .lbl { font-size: 11px; color: var(--text-dim); margin-top: 3px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ── MAIN MENU ── */
+  #mainMenu { gap: 20px; text-align: center; }
+  .menu-title { font-size: clamp(22px, 5vw, 34px); font-weight: 700; letter-spacing: -0.02em; }
+  .menu-sub { font-size: 13px; color: var(--text-dim); font-weight: 400; }
+  .menu-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px; width: 100%; max-width: 540px;
+  }
+  .menu-card {
+    background: var(--card); border: 1px solid var(--border-soft);
+    border-radius: 18px; padding: 22px 18px;
+    cursor: pointer; transition: all 0.2s; text-align: left;
+    position: relative; overflow: hidden;
+  }
+  .menu-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--accent-dim), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .menu-card:hover::before { opacity: 1; }
+  .menu-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--glow); }
+  .menu-card-icon { font-size: 26px; margin-bottom: 10px; }
+  .menu-card-title { font-size: 15px; font-weight: 700; margin-bottom: 5px; letter-spacing: -0.01em; }
+  .menu-card-desc { font-size: 12px; color: var(--text-dim); line-height: 1.55; font-weight: 400; }
+  .menu-card.resume-card { border-color: rgba(16,185,129,0.25); }
+  .menu-card.resume-card:hover { border-color: var(--correct); }
+  .resume-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 6px; font-size: 9px; color: var(--correct);
+    padding: 2px 7px; letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* ── SECTION SELECT ── */
+  #select { gap: 22px; justify-content: flex-start; padding-top: 48px; overflow-y: auto; }
+  .select-title { font-size: 26px; font-weight: 700; text-align: center; letter-spacing: -0.02em; }
+  .select-sub { font-size: 12px; color: var(--text-dim); text-align: center; font-weight: 400; }
+  .section-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px; width: 100%; max-width: 680px;
+    max-height: 52vh; overflow-y: auto; padding: 2px;
+  }
+  .section-card {
+    background: var(--card); border: 1px solid var(--border-soft);
+    border-radius: 14px; padding: 14px; cursor: pointer; transition: all 0.18s;
+    position: relative; overflow: hidden;
+  }
+  .section-card:hover { border-color: var(--accent); background: var(--card-hover); }
+  .section-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+  .section-card .sec-num { font-size: 10px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 5px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  .section-card .sec-name { font-size: 13px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
+  .section-card .sec-count { margin-top: 8px; font-size: 10px; color: var(--text-dim); font-weight: 500; }
+  .select-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 26px; border-radius: 12px; border: none;
+    font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; letter-spacing: 0.01em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #6d28d9);
+    color: #fff; box-shadow: 0 0 28px rgba(139,92,246,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 40px rgba(139,92,246,0.5); }
+  .btn-ghost { background: var(--card); border: 1px solid var(--border-soft); color: var(--text-dim); }
+  .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); background: var(--card-hover); }
+  .btn-danger { background: transparent; border: 1px solid rgba(244,63,94,0.25); color: var(--wrong); }
+  .btn-danger:hover { background: rgba(244,63,94,0.08); border-color: var(--wrong); }
+
+  /* ── QUIZ SCREEN ── */
+  #quiz { flex-direction: column; gap: 0; padding: 0; justify-content: flex-start; overflow-y: auto; }
+  .quiz-header { width: 100%; max-width: 700px; padding: 18px 24px 0; margin: 0 auto; flex-shrink: 0; }
+  .quiz-top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; gap: 8px;
+  }
+  .section-label {
+    font-size: 10px; color: var(--accent); letter-spacing: 0.12em;
+    text-transform: uppercase; flex: 1; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Timer */
+  .timer-wrap { display: flex; align-items: center; gap: 6px; }
+  .timer-ring { position: relative; width: 34px; height: 34px; }
+  .timer-ring svg { transform: rotate(-90deg); }
+  .timer-track { fill: none; stroke: var(--border-soft); stroke-width: 3; }
+  .timer-fill { fill: none; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+  .timer-num {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text);
+  }
+
+  /* Streak */
+  .streak-badge {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 700;
+    color: var(--accent3); transition: all 0.3s; font-family: 'JetBrains Mono', monospace;
+  }
+  .streak-badge.hot { background: rgba(245,158,11,0.22); border-color: var(--accent3); animation: streak-pulse 0.4s ease; }
+  @keyframes streak-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+  .q-counter { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: var(--text-dim); white-space: nowrap; }
+  .q-counter span { color: var(--text); }
+
+  .progress-track { width: 100%; height: 3px; background: var(--border-soft); border-radius: 99px; overflow: hidden; margin-bottom: 5px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.4s ease; }
+  .score-live { text-align: right; font-size: 11px; color: var(--text-dim); font-weight: 500; }
+  .score-live span { color: var(--accent3); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+  .quiz-body { width: 100%; max-width: 700px; padding: 20px 24px; margin: 0 auto; flex: 1; }
+
+  .question-num {
+    font-size: 11px; color: var(--accent2); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 10px; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .question-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  .question-text {
+    font-size: clamp(16px, 2.8vw, 21px);
+    font-weight: 600; line-height: 1.45; color: var(--text);
+    flex: 1; letter-spacing: -0.01em;
+  }
+
+  /* Bookmark */
+  .bookmark-btn {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    cursor: pointer; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s; margin-top: 3px;
+  }
+  .bookmark-btn:hover { border-color: var(--accent3); transform: scale(1.08); }
+  .bookmark-btn.active { background: rgba(245,158,11,0.12); border-color: var(--accent3); }
+
+  /* Options */
+  .options-grid { display: grid; gap: 9px; }
+  .option-btn {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    background: var(--card); border: 1px solid var(--border-soft);
+    border-radius: 14px; cursor: pointer; transition: all 0.16s;
+    text-align: left; width: 100%; color: var(--text);
+    font-family: 'Outfit', sans-serif; font-size: 14px;
+    font-weight: 500; line-height: 1.45;
+    position: relative;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent2); background: var(--accent2-dim);
+    transform: translateX(3px);
+  }
+  .option-letter {
+    min-width: 30px; height: 30px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    font-weight: 700; flex-shrink: 0; color: var(--text-dim);
+    transition: all 0.16s;
+  }
+  .option-btn:hover:not(:disabled) .option-letter { border-color: var(--accent2); color: var(--accent2); }
+  .option-btn.correct { border-color: var(--correct); background: rgba(16,185,129,0.1); animation: pulse-correct 0.35s ease; }
+  .option-btn.correct .option-letter { background: var(--correct); border-color: var(--correct); color: #fff; }
+  .option-btn.wrong { border-color: var(--wrong); background: rgba(244,63,94,0.1); animation: shake 0.3s ease; }
+  .option-btn.wrong .option-letter { background: var(--wrong); border-color: var(--wrong); color: #fff; }
+  .option-btn:disabled { cursor: default; }
+  @keyframes pulse-correct { 0%{transform:scale(1)} 50%{transform:scale(1.008)} 100%{transform:scale(1)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+
+  /* Feedback */
+  .feedback-bar {
+    margin-top: 14px; padding: 12px 16px; border-radius: 12px;
+    font-size: 13px; font-weight: 500; display: none; align-items: center; gap: 10px;
+  }
+  .feedback-bar.show { display: flex; }
+  .feedback-bar.correct-fb { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+  .feedback-bar.wrong-fb { background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); color: #fca5a5; }
+
+  .next-row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-bottom: 28px; gap: 12px; }
+  .next-row-right { display: flex; gap: 10px; }
+
+  /* ── BOOKMARKS ── */
+  #bookmarks { gap: 20px; justify-content: flex-start; padding-top: 48px; overflow-y: auto; }
+  .bookmarks-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .bookmarks-list { width: 100%; max-width: 660px; display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; padding: 2px; }
+  .bookmark-item {
+    background: var(--card); border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 14px; padding: 15px 18px; cursor: pointer; transition: all 0.18s;
+  }
+  .bookmark-item:hover { border-color: var(--accent3); transform: translateX(3px); }
+  .bookmark-item-q { font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 5px; letter-spacing: -0.01em; }
+  .bookmark-item-sec { font-size: 10px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  .bookmarks-empty { color: var(--text-dim); font-size: 13px; text-align: center; padding: 36px; border: 1px dashed var(--border-soft); border-radius: 14px; width: 100%; max-width: 380px; line-height: 1.7; }
+
+  /* ── RESULTS ── */
+  #results { gap: 22px; text-align: center; overflow-y: auto; padding-top: 32px; justify-content: flex-start; }
+  .result-ring { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+  .result-ring svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--border-soft); stroke-width: 9; }
+  .ring-fill { fill: none; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1); }
+  .ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .ring-pct { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+  .ring-lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .result-title { font-size: clamp(22px, 5vw, 38px); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  .result-breakdown { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .breakdown-chip { background: var(--card); border: 1px solid var(--border-soft); border-radius: 14px; padding: 13px 18px; text-align: center; min-width: 80px; }
+  .breakdown-chip .bnum { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .breakdown-chip .blbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px; font-weight: 600; }
+  .bnum.c { color: var(--correct); }
+  .bnum.w { color: var(--wrong); }
+  .bnum.t { color: var(--accent2); }
+  .bnum.s { color: var(--accent3); }
+  .grade-badge { display: inline-block; padding: 5px 18px; border-radius: 100px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+  .result-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 99px; opacity: 0.5; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 22px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px 20px;
+    font-size: 13px; font-weight: 500; color: var(--text);
+    z-index: 200; transition: transform 0.28s ease; white-space: nowrap;
+    backdrop-filter: blur(8px);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Timeout bar */
+  .timeout-bar {
+    height: 3px; background: var(--wrong); position: absolute;
+    bottom: 0; left: 0; right: 0; border-radius: 0 0 13px 13px;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .option-btn { position: relative; }
+  .option-btn.timed-out .timeout-bar { opacity: 1; }
+
+  /* Enchanted glow rings on cards */
+  @keyframes enchant-pulse {
+    0%, 100% { box-shadow: var(--glow); }
+    50% { box-shadow: 0 0 60px rgba(139,92,246,0.2); }
+  }
+  .stat-chip:hover { animation: enchant-pulse 2s ease infinite; }
+
+  /* ── LOADING SCREEN ── */
+  #loadingScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #07070f;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px;
+    transition: opacity 0.6s ease;
+  }
+  #loadingScreen.fade-out { opacity: 0; pointer-events: none; }
+  .loading-logo {
+    font-size: 56px; animation: logo-bounce 1.2s ease infinite alternate;
+  }
+  @keyframes logo-bounce {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-14px) scale(1.08); }
+  }
+  .loading-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(16px,3vw,24px); font-weight: 700; letter-spacing: 0.12em;
+    background: linear-gradient(135deg, #c4b5fd, #22d3ee);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    text-transform: uppercase;
+  }
+  .loading-bar-wrap {
+    width: min(340px, 80vw); height: 4px;
+    background: rgba(139,92,246,0.15); border-radius: 99px; overflow: hidden;
+  }
+  .loading-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #8b5cf6, #22d3ee);
+    border-radius: 99px;
+    animation: load-fill 2.2s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  @keyframes load-fill { 0%{width:0%} 70%{width:80%} 100%{width:100%} }
+  .loading-dots {
+    display: flex; gap: 8px;
+  }
+  .loading-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    animation: dot-pulse 1.2s ease infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; background: var(--accent2); }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; background: var(--accent3); }
+  @keyframes dot-pulse {
+    0%,80%,100%{transform:scale(0.7);opacity:0.4} 40%{transform:scale(1.1);opacity:1}
+  }
+  .loading-tip {
+    font-size: 12px; color: var(--text-dim); letter-spacing: 0.04em;
+    animation: tip-fade 2.2s ease;
+  }
+  @keyframes tip-fade { 0%{opacity:0} 30%{opacity:1} 90%{opacity:1} 100%{opacity:0.6} }
+
+  /* ── THREE.JS CANVAS ── */
+  #threeCanvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    opacity: 0; transition: opacity 1s ease;
+  }
+  #threeCanvas.visible { opacity: 1; }
+
+  /* ── LEADERBOARD ── */
+  #leaderboard { gap: 18px; justify-content: flex-start; padding-top: 40px; overflow-y: auto; }
+  .lb-header { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; text-align: center; }
+  .lb-sub { font-size: 12px; color: var(--text-dim); text-align: center; }
+  .lb-list {
+    width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 8px;
+    max-height: 58vh; overflow-y: auto; padding: 2px;
+  }
+  .lb-row {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--card); border: 1px solid var(--border-soft);
+    border-radius: 14px; padding: 13px 18px;
+    transition: all 0.18s; position: relative; overflow: hidden;
+  }
+  .lb-row.rank-1 { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.06); }
+  .lb-row.rank-2 { border-color: rgba(156,163,175,0.35); background: rgba(156,163,175,0.04); }
+  .lb-row.rank-3 { border-color: rgba(180,100,50,0.35); background: rgba(180,100,50,0.04); }
+  .lb-row.is-me { border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.06); }
+  .lb-rank {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    min-width: 28px; text-align: center;
+    color: var(--text-dim);
+  }
+  .lb-row.rank-1 .lb-rank { color: #f59e0b; }
+  .lb-row.rank-2 .lb-rank { color: #9ca3af; }
+  .lb-row.rank-3 .lb-rank { color: #b46432; }
+  .lb-avatar { font-size: 20px; }
+  .lb-name { flex: 1; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .lb-score-wrap { text-align: right; }
+  .lb-score { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: var(--accent2); }
+  .lb-pct { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .lb-streak { font-size: 11px; color: var(--accent3); font-weight: 600; }
+  .lb-empty { color: var(--text-dim); font-size: 13px; text-align: center; padding: 32px; line-height: 1.7; }
+  .lb-you-badge {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+    border-radius: 5px; font-size: 9px; color: var(--accent);
+    padding: 2px 6px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+  }
+  .lb-clear-btn { font-size: 11px; color: var(--wrong); background: none; border: none; cursor: pointer; opacity: 0.7; }
+  .lb-clear-btn:hover { opacity: 1; }
+
+  /* ── AUTO-ADVANCE OVERLAY ── */
+  .auto-advance {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.5); border-radius: 14px; z-index: 5;
+    font-size: 12px; color: var(--text-dim); gap: 6px;
+  }
+  .auto-advance.show { display: flex; }
+  .auto-advance-ring {
+    width: 18px; height: 18px; position: relative;
+  }
+  .aa-svg { transform: rotate(-90deg); }
+
+</style>
+</head>
+<body>
+
+
+<!-- LOADING SCREEN -->
+<div id="loadingScreen">
+  <div class="loading-logo">🧠</div>
+  <div class="loading-title">ML Knowledge Quest</div>
+  <div class="loading-dots">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+  <div class="loading-bar-wrap"><div class="loading-bar-fill"></div></div>
+  <div class="loading-tip">Preparing your neural pathways…</div>
+</div>
+
+<!-- THREE.JS CANVAS -->
+<canvas id="threeCanvas"></canvas>
+
+<div class="particles" id="particles"></div>
+<button class="theme-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
+<div class="toast" id="toast"></div>
+
+<!-- NAME INPUT -->
+<div class="screen" id="nameInput">
+  <div class="name-card">
+    <div class="name-icon">🧠</div>
+    <div class="name-title">Who's Playing?</div>
+    <p class="name-sub">Enter your name to save your progress and track your streak.</p>
+    <div class="avatar-row" id="avatarRow">
+      <div class="avatar-opt chosen" data-emoji="🚀" onclick="selectAvatar(this)">🚀</div>
+      <div class="avatar-opt" data-emoji="⚡" onclick="selectAvatar(this)">⚡</div>
+      <div class="avatar-opt" data-emoji="🔥" onclick="selectAvatar(this)">🔥</div>
+      <div class="avatar-opt" data-emoji="🤖" onclick="selectAvatar(this)">🤖</div>
+      <div class="avatar-opt" data-emoji="🎯" onclick="selectAvatar(this)">🎯</div>
+      <div class="avatar-opt" data-emoji="💡" onclick="selectAvatar(this)">💡</div>
+    </div>
+    <input class="name-field" id="playerNameInput" type="text" placeholder="Enter your name…" maxlength="24" autocomplete="off" onkeydown="if(event.key==='Enter')confirmName()">
+    <button class="btn btn-primary" onclick="confirmName()" style="width:100%;justify-content:center;">Continue →</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="screen" id="hero">
+  <div class="hero-eyebrow">⚡ AWS ML Quiz</div>
+  <h1 class="hero-title">ML<br>KNOWLEDGE<br>QUEST</h1>
+  <p class="hero-sub">Test your AWS & Cloud knowledge across 8 sections — from security to pricing.</p>
+  <div class="stats-row">
+    <div class="stat-chip"><div class="num">149</div><div class="lbl">Questions</div></div>
+    <div class="stat-chip"><div class="num">8</div><div class="lbl">Modules</div></div>
+    <div class="stat-chip"><div class="num" id="heroStreak">0</div><div class="lbl">Best Streak</div></div>
+  </div>
+  <button class="btn btn-primary" onclick="showScreen('mainMenu')" style="margin-top:4px;">▶ Play Now</button>
+</div>
+
+<!-- MAIN MENU -->
+<div class="screen" id="mainMenu">
+  <div class="menu-title">Main Menu</div>
+  <p class="menu-sub" id="menuGreeting">What would you like to do?</p>
+  <div class="menu-grid">
+    <div class="menu-card resume-card" id="resumeCard" onclick="resumeQuiz()" style="display:none;">
+      <div class="resume-badge">SAVED</div>
+      <div class="menu-card-icon">▶️</div>
+      <div class="menu-card-title">Resume Quiz</div>
+      <div class="menu-card-desc" id="resumeDesc">Continue where you left off</div>
+    </div>
+    <div class="menu-card" onclick="goToName('all')">
+      <div class="menu-card-icon">🎲</div>
+      <div class="menu-card-title">Play All</div>
+      <div class="menu-card-desc">All 149 questions, shuffled randomly</div>
+    </div>
+    <div class="menu-card" onclick="goToName('select')">
+      <div class="menu-card-icon">🗂️</div>
+      <div class="menu-card-title">Choose Sections</div>
+      <div class="menu-card-desc">Pick specific modules to study</div>
+    </div>
+    <div class="menu-card" onclick="openLeaderboard()">
+      <div class="menu-card-icon">🏆</div>
+      <div class="menu-card-title">Leaderboard</div>
+      <div class="menu-card-desc" id="lbCountDesc">View top scores</div>
+    </div>
+    <div class="menu-card" onclick="showBookmarks()">
+      <div class="menu-card-icon">🔖</div>
+      <div class="menu-card-title">Bookmarks</div>
+      <div class="menu-card-desc" id="bookmarkCountDesc">Review saved questions</div>
+    </div>
+  </div>
+  <button class="btn btn-ghost" onclick="showScreen('hero')" style="margin-top:4px;">← Back</button>
+</div>
+
+<!-- SECTION SELECT -->
+<div class="screen" id="select">
+  <div class="select-title">Choose Your Sections</div>
+  <p class="select-sub">Select one or more sections to quiz yourself on</p>
+  <div class="section-grid" id="sectionGrid"></div>
+  <div class="select-actions">
+    <button class="btn btn-ghost" onclick="toggleAll()">Toggle All</button>
+    <button class="btn btn-primary" onclick="startSelected()">▶ Start Quiz</button>
+    <button class="btn btn-ghost" onclick="showScreen('mainMenu')">← Menu</button>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="screen" id="quiz">
+  <div class="quiz-header">
+    <div class="quiz-top-bar">
+      <div class="section-label" id="sectionLabel"></div>
+      <div class="streak-badge" id="streakBadge">🔥 <span id="streakNum">0</span></div>
+      <div class="timer-wrap">
+        <div class="timer-ring">
+          <svg viewBox="0 0 36 36" width="34" height="34">
+            <circle class="timer-track" cx="18" cy="18" r="15"/>
+            <circle class="timer-fill" id="timerFill" cx="18" cy="18" r="15" stroke-dasharray="94.2" stroke-dashoffset="0" stroke="var(--accent2)"/>
+          </svg>
+          <div class="timer-num" id="timerNum">30</div>
+        </div>
+      </div>
+      <div class="q-counter">Q <span id="qNum">1</span>/<span id="qTotal">10</span></div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="score-live">Score: <span id="liveScore">0</span></div>
+  </div>
+  <div class="quiz-body">
+    <div class="question-num" id="questionNum"></div>
+    <div class="question-header">
+      <div class="question-text" id="questionText"></div>
+      <button class="bookmark-btn" id="bookmarkBtn" onclick="toggleBookmark()" title="Bookmark this question">🔖</button>
+    </div>
+    <div class="options-grid" id="optionsGrid"></div>
+    <div class="feedback-bar" id="feedbackBar"></div>
+    <div class="next-row">
+      <button class="btn btn-ghost btn-danger" onclick="quitQuiz()">✕ Quit</button>
+      <div class="next-row-right">
+        <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()" style="display:none;">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKMARKS -->
+<div class="screen" id="bookmarks">
+  <div class="bookmarks-header">
+    <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em;">🔖 Bookmarks</div>
+  </div>
+  <div class="bookmarks-list" id="bookmarksList"></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+    <button class="btn btn-primary" onclick="startBookmarkQuiz()" id="startBookmarkBtn">▶ Quiz Bookmarks</button>
+    <button class="btn btn-ghost" onclick="showScreen('mainMenu')">← Menu</button>
+  </div>
+</div>
+
+
+<!-- LEADERBOARD -->
+<div class="screen" id="leaderboard">
+  <div class="lb-header">🏆 Leaderboard</div>
+  <p class="lb-sub">Top scores from all players on this device</p>
+  <div class="lb-list" id="lbList"></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+    <button class="lb-clear-btn" onclick="clearLeaderboard()">Clear All Scores</button>
+    <button class="btn btn-ghost" onclick="showScreen('mainMenu')">← Menu</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="results">
+  <div class="result-ring">
+    <svg viewBox="0 0 160 160" width="150" height="150">
+      <circle class="ring-bg" cx="80" cy="80" r="70"/>
+      <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="70" stroke-dasharray="439.8" stroke-dashoffset="439.8"/>
+    </svg>
+    <div class="ring-text">
+      <div class="ring-pct" id="ringPct">0%</div>
+      <div class="ring-lbl">Score</div>
+    </div>
+  </div>
+  <div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="grade-badge" id="gradeBadge" style="margin-top:8px;"></div>
+  </div>
+  <div class="result-breakdown">
+    <div class="breakdown-chip"><div class="bnum c" id="resCorrect">0</div><div class="blbl">Correct</div></div>
+    <div class="breakdown-chip"><div class="bnum w" id="resWrong">0</div><div class="blbl">Wrong</div></div>
+    <div class="breakdown-chip"><div class="bnum t" id="resTotal">0</div><div class="blbl">Total</div></div>
+    <div class="breakdown-chip"><div class="bnum s" id="resBestStreak">0</div><div class="blbl">Best Streak</div></div>
+  </div>
+  <div class="result-btns">
+    <button class="btn btn-primary" onclick="restartSame()">↺ Retry</button>
+    <button class="btn btn-ghost" onclick="openLeaderboard()">🏆 Board</button>
+    <button class="btn btn-ghost" onclick="showScreen('mainMenu')">☰ Menu</button>
+  </div>
+</div>
+
+<script>
+// ══ DATA ══
+const ALL_QUESTIONS = [
+  {s:"Module 1: Security in AWS",q:"A company is moving its on-premises database to AWS. Who is responsible for patching the underlying guest OS of an Amazon EC2 instance?",o:["AWS","The Customer","Both AWS and the Customer","The Hardware Vendor"],a:1},
+  {s:"Module 1: Security in AWS",q:"An administrator needs to grant a developer temporary access to an S3 bucket in a different AWS account. What is the best IAM entity to use?",o:["IAM User","IAM Group","IAM Role","IAM Policy"],a:2},
+  {s:"Module 1: Security in AWS",q:"You want to ensure that even if a developer's password is leaked, an attacker cannot log in to the AWS Console. What should you implement?",o:["Complex Password Policy","Multi-Factor Authentication (MFA)","Service Control Policies (SCP)","Amazon GuardDuty"],a:1},
+  {s:"Module 1: Security in AWS",q:"A company has 500 employees. What is the AWS best practice for managing their permissions?",o:["Assign policies to each individual user.","Use IAM Groups and assign policies to the groups.","Give everyone Administrator access to avoid tickets.","Use a single shared login for the whole team."],a:1},
+  {s:"Module 1: Security in AWS",q:"Which principle suggests that users should only have the minimum permissions necessary to perform their job?",o:["Principle of Maximum Efficiency","Principle of Least Privilege","Principle of Shared Responsibility","Principle of Integrity"],a:1},
+  {s:"Module 1: Security in AWS",q:"A developer is trying to upload a file to an S3 bucket but receives an 'Access Denied' error. The developer has an IAM policy allowing s3:PutObject. What is the most likely reason?",o:["The developer is not using MFA.","There is an explicit Deny in a Service Control Policy (SCP) or Bucket Policy.","The developer needs to be part of the Admin group.","S3 does not support IAM roles."],a:1},
+  {s:"Module 1: Security in AWS",q:"You want to allow an EC2 instance to securely access an S3 bucket without storing AWS Access Keys on the instance's hard drive. What should you do?",o:["Write the keys in the User Data script.","Attach an IAM Role to the EC2 instance.","Use a highly complex password for the EC2 login.","Hardcode the keys into the application code."],a:1},
+  {s:"Module 1: Security in AWS",q:"An auditor asks for a report showing all IAM users in the account and the status of their credentials (passwords/access keys). Which tool generates this?",o:["AWS CloudTrail","IAM Credential Report","AWS Trusted Advisor","Amazon Inspector"],a:1},
+  {s:"Module 1: Security in AWS",q:"You are using AWS Organizations. You want to ensure that no one (including the Root user) in a specific member account can delete CloudWatch Logs. Where do you apply this?",o:["IAM Policy on each user.","Bucket Policy on S3.","Service Control Policy (SCP) at the Organization level.","AWS Shield."],a:2},
+  {s:"Module 1: Security in AWS",q:"Which AWS service helps you manage and rotate database secrets (passwords) automatically every 30 days?",o:["IAM Roles","AWS Secrets Manager","AWS Systems Manager Parameter Store","AWS Key Management Service (KMS)"],a:1},
+  {s:"Module 1: Security in AWS",q:"You are performing a demo on creating an IAM Role. You want to allow a Lambda function to write logs to CloudWatch. Which Trusted Entity should you select when creating the role?",o:["IAM User","AWS Service (Lambda)","Web Identity","SAML 2.0 federation"],a:1},
+  {s:"Module 1: Security in AWS",q:"During a demo, you create an IAM user but forget to download the .csv file containing the Secret Access Key. What is the only way to get that key again?",o:["Go to the user's Security Credentials tab and click View Key.","Email AWS Support for a retrieval.","You cannot retrieve it; you must delete the old key and create a new one.","Check the CloudTrail logs."],a:2},
+  {s:"Module 1: Security in AWS",q:"You are setting up MFA for the Root User during a security workshop. Which device type is generally considered the most secure for a high-traffic production account?",o:["Virtual MFA (Google Authenticator)","SMS-based MFA","Hardware TOTP Token (e.g., YubiKey)","Email-based OTP"],a:2},
+  {s:"Module 1: Security in AWS",q:"You have two developers, Alice and Bob. Alice is in the Admin group, and Bob is in the ReadOnly group. You move Bob into the Admin group. What are Bob's new permissions?",o:["Only ReadOnly","Only Admin","Both (Admin + ReadOnly)","Neither, until he logs out and back in."],a:2},
+  {s:"Module 1: Security in AWS",q:"You want to restrict access to your AWS environment so that users can only log in from your corporate office IP address. Which element of the IAM Policy JSON would you use?",o:["Effect","Principal","Condition","Action"],a:2},
+  {s:"Module 1: Security in AWS",q:"A security auditor discovers that an IAM user has been using the same Access Keys for 3 years. Which best practice did the company fail to follow?",o:["Principle of Least Privilege","Regular Key Rotation","Multi-Factor Authentication","Role-Based Access Control"],a:1},
+  {s:"Module 1: Security in AWS",q:"You have a developer who needs to manage only the EC2 instances tagged with Environment: Development. Which IAM feature allows you to restrict access based on these tags?",o:["IAM Groups","IAM Policy Conditions (Attribute-Based Access Control - ABAC)","Service Control Policies (SCP)","IAM Roles"],a:1},
+  {s:"Module 1: Security in AWS",q:"You accidentally deleted a production IAM Role. What is the fastest way to see who deleted it and at what exact time?",o:["CloudWatch Metrics","IAM Credential Report","CloudTrail Event History","Trusted Advisor Security Check"],a:2},
+  {s:"Module 1: Security in AWS",q:"You want to ensure that no one in your Test AWS account can launch expensive G5 GPU instances. Where do you apply this restriction?",o:["IAM Policy for each user","Service Control Policy (SCP) at the Organizational Unit (OU) level","S3 Bucket Policy","CloudWatch Alarm"],a:1},
+  {s:"Module 1: Security in AWS",q:"You created a new IAM user and gave them the AdministratorAccess policy. However, they cannot access the Billing section of the console. Why?",o:["AdministratorAccess doesn't include billing by default.","IAM user access to billing must be explicitly enabled by the Root user.","The user needs a Business support plan.","Billing is only visible in the us-east-1 region."],a:1},
+  {s:"Module 1: Security in AWS",q:"You suspect an IAM user's Access Keys have been leaked on GitHub. What is the first thing you should do?",o:["Change the user's password.","Deactivate (Inactivate) the Access Key in the IAM console.","Delete the IAM user.","Open a support ticket with AWS."],a:1},
+  {s:"Module 1: Security in AWS",q:"You need to encrypt data stored in an S3 bucket. Which service provides and manages the encryption keys?",o:["AWS IAM","AWS Key Management Service (KMS)","AWS Certificate Manager (ACM)","AWS Shield"],a:1},
+  {s:"Module 1: Security in AWS",q:"Which AWS security service uses Machine Learning to automatically discover, classify, and protect sensitive data (like PII) in S3?",o:["Amazon GuardDuty","Amazon Macie","Amazon Inspector","AWS WAF"],a:1},
+  {s:"Module 1: Security in AWS",q:"An auditor needs to see a list of all successful and failed logins to the AWS Console over the last 6 months. Where should you look?",o:["CloudWatch Metrics","IAM User Console","CloudTrail (with a Trail enabled for long-term storage in S3)","Trusted Advisor"],a:2},
+  {s:"Module 1: Security in AWS",q:"You want to ensure that if anyone disables Multi-Factor Authentication (MFA) for the Root user, an alert is sent immediately. What is the best architected solution?",o:["Check the console manually every morning.","Create a CloudWatch Metric Filter on CloudTrail logs for the DeactivateMFADevice event, and trigger an Alarm/SNS.","Use the AWS Pricing Calculator.","Attach an IAM Policy to the Root user."],a:1},
+  {s:"Module 1: Security in AWS",q:"Which feature of IAM allows you to give a user from a different AWS account access to your resources without creating a new IAM user for them?",o:["IAM Group","IAM Policy","IAM Role (Cross-Account Role)","MFA"],a:2},
+  {s:"Module 1: Security in AWS",q:"You are using AWS Organizations. What is the purpose of a Service Control Policy (SCP)?",o:["To increase the performance of the network.","To set the maximum possible permissions (Guardrails) for member accounts.","To automate the rotation of passwords.","To monitor the CPU of all instances in the organization."],a:1},
+  {s:"Module 1: Security in AWS",q:"A user has two policies. Policy A Allows s3:GetObject on all buckets. Policy B Denies s3:GetObject on a specific bucket named Confidential. What happens when the user tries to access a file in Confidential?",o:["Access is Allowed because Policy A is broader.","Access is Denied because an explicit Deny always overrides an Allow.","Access is Allowed if the user is an Administrator.","AWS will ask the user for a second password."],a:1},
+  {s:"Module 1: Security in AWS",q:"You want to ensure your AWS Root User is as secure as possible. Which of the following is a recommended Day 1 task?",o:["Delete the Root User account.","Lock away the Root User credentials and use an IAM User with Admin permissions for daily tasks.","Share the Root password with all senior managers.","Disable MFA for the Root user to prevent getting locked out."],a:1},
+  {s:"Module 1: Security in AWS",q:"You are using IAM Roles for your developers. What is the main benefit of using a Session Duration setting?",o:["It speeds up the login process.","It limits how long the temporary security credentials remain valid.","It tracks how many hours the developer works.","It reduces the cost of the IAM service."],a:1},
+  {s:"Module 1: Security in AWS",q:"A security team wants to ensure that no IAM user in any member account can delete the company's central S3 logging bucket. What is the most efficient way to enforce this across 50 accounts?",o:["Attach an inline policy to every user in every account.","Apply a Service Control Policy (SCP) at the Root level of the AWS Organization.","Use an S3 Bucket Policy on the logging bucket.","Delete the DeleteBucket permission from the AdministratorAccess managed policy."],a:1},
+  {s:"Module 1: Security in AWS",q:"You are using AWS Organizations and want to automate the creation of a new account for every new project. Which tool allows you to programmatically create and bootstrap these accounts?",o:["AWS IAM","AWS Organizations API","AWS Trusted Advisor","AWS Cost Explorer"],a:1},
+  {s:"Module 1: Security in AWS",q:"A developer needs to access a production account for 2 hours to fix a bug. They usually only have access to the development account. What is the best practice?",o:["Create a permanent IAM user for them in the production account.","Share the production Root user credentials.","Have the developer Assume a cross-account IAM Role with a 2-hour session duration.","Move the production resources into the development account."],a:2},
+  {s:"Module 1: Security in AWS",q:"You want to restrict access to a specific AWS service so it can only be used during Business Hours (9 AM to 5 PM). Which IAM Policy element allows this?",o:["Action","Resource","Condition (using aws:CurrentTime)","Principal"],a:2},
+  {s:"Module 2: Monitoring & Management",q:"You need to receive an email notification whenever an EC2 instance's CPU utilization exceeds 80%. Which tool combination do you use?",o:["CloudTrail + SNS","CloudWatch Alarms + SNS","CloudWatch Logs + Config","Trusted Advisor + SNS"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"An unauthorized user terminated a production instance. Which service would you use to find out who made the API call and when?",o:["Amazon CloudWatch","AWS CloudTrail","Amazon Inspector","AWS Shield"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to monitor the system logs (e.g., /var/log/messages) of your EC2 instances in a centralized location. What should you use?",o:["CloudWatch Metrics","CloudWatch Logs","CloudTrail","S3 Access Logs"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"Which CloudWatch feature provides a 1-minute granularity for EC2 metrics instead of the default 5-minute granularity?",o:["Basic Monitoring","Detailed Monitoring","Enhanced Networking","High-Resolution Metrics"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"Your web application is running slow. You want to see a graph of the Request Count and Latency of your Application Load Balancer. Where do you look?",o:["CloudWatch Metrics","CloudWatch Logs","CloudTrail","VPC Flow Logs"],a:0},
+  {s:"Module 2: Monitoring & Management",q:"You want to be alerted if your monthly AWS bill is projected to exceed $500. Which tool should you use?",o:["Cost Explorer","AWS Budgets","CloudWatch Logs","Pricing Calculator"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"An EC2 instance keeps crashing. You need to inspect the application error messages that were generated right before the crash. Where are these stored?",o:["CloudWatch Metrics","CloudWatch Logs","CloudTrail","AWS Config"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You notice a CloudWatch Alarm is in the INSUFFICIENT_DATA state. What does this mean?",o:["The instance has crashed.","The metric has not been reported recently or is still being collected.","The threshold has been exceeded.","Your AWS account is over the limit."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to track every time a user logs into the AWS Management Console. Which service provides this audit trail?",o:["CloudWatch","CloudTrail","IAM","Amazon GuardDuty"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You are setting up a CloudWatch Alarm for an EC2 instance. The alarm is triggered, but you never received the email notification. What is the most likely Demo step you missed?",o:["You didn't enable Detailed Monitoring.","You didn't Confirm Subscription in the SNS email sent by AWS.","You forgot to restart the EC2 instance.","CloudWatch requires a NAT Gateway to send emails."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to create a Composite Alarm in CloudWatch. What is the purpose of this?",o:["To monitor multiple regions at once.","To reduce alarm noise by triggering only when multiple conditions are met (e.g., High CPU AND High Latency).","To monitor both AWS and on-premises servers in one graph.","To automatically scale an EC2 instance."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You are analyzing CloudWatch Logs for a web server. You see thousands of lines of data and want to quickly find only the entries that contain the word Error. Which tool should you use?",o:["CloudWatch Metrics","CloudWatch Alarms","CloudWatch Logs Insights","AWS CloudTrail"],a:2},
+  {s:"Module 2: Monitoring & Management",q:"During a demo of EC2 monitoring, you notice that Memory Utilization is missing from the list of default metrics. How do you get this data?",o:["Enable Detailed Monitoring.","Install the CloudWatch Agent on the EC2 instance.","Change the instance type to a T3.","Use CloudTrail instead."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to see the status of an EC2 instance that failed its hardware check. Which CloudWatch metric should you monitor?",o:["CPUUtilization","StatusCheckFailed_System","StatusCheckFailed_Instance","NetworkIn"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to automate a response so that if an EC2 instance fails a status check, it is automatically rebooted. Which tool allows this?",o:["CloudWatch Alarm Actions","CloudTrail Logs","AWS Budgets","Amazon Macie"],a:0},
+  {s:"Module 2: Monitoring & Management",q:"How long does AWS CloudTrail store its event history by default for free?",o:["30 days","90 days","1 year","Indefinitely"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You need to monitor your VPC traffic to see which IP addresses are being rejected by your Security Groups. What should you enable?",o:["CloudTrail","CloudWatch Alarms","VPC Flow Logs","AWS Trusted Advisor"],a:2},
+  {s:"Module 2: Monitoring & Management",q:"Your Application Load Balancer is healthy, but users are reporting 504 Gateway Timeout errors. Which CloudWatch metric should you analyze first?",o:["RequestCount","TargetResponseTime","ActiveConnectionCount","HealthyHostCount"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to retain your CloudWatch Logs for 7 years for compliance, but the default is Never Expire. How do you manage this cost-effectively?",o:["Copy logs to a physical hard drive manually","Set a Log Group Retention Policy and export old logs to S3 Glacier","Keep them in CloudWatch (it is free)","Delete the logs every month"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"An EC2 instance has an Alarm state for its CPU alarm, but the CPU is only at 10%. Why might this happen?",o:["The instance is stopped.","The alarm is configured with a Less Than (<) operator instead of Greater Than (>).","CloudWatch is broken.","The instance is in a different region."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to monitor the health of your website from different parts of the world (Global Monitoring). Which CloudWatch feature do you use?",o:["CloudWatch Logs","CloudWatch Synthetics (Canaries)","CloudWatch Metrics","CloudWatch Alarms"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to monitor the Disk Space (Percentage used) on your EC2 Windows instance. Standard CloudWatch metrics don't show this. What is the first step?",o:["Enable Detailed Monitoring in the console.","Install and configure the Unified CloudWatch Agent on the instance.","Use CloudTrail to track disk writes.","Switch the instance to an EBS-optimized type."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You are configuring the CloudWatch Agent. You want to collect logs from a specific file path like /var/log/myapp.log. Where do you define this?",o:["In the IAM Role attached to the instance.","In the CloudWatch Agent Configuration File (JSON).","In the EC2 User Data script.","In the S3 Bucket Policy."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"Which CloudWatch metric can help you determine if an EC2 instance is struggling due to Network Throughput limits?",o:["CPUUtilization","NetworkOut / NetworkIn","DiskReadOps","MetadataNoToken"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You have an Organization Trail enabled in CloudTrail. Where are the log files from all member accounts centrally stored?",o:["In a separate S3 bucket in each member account.","In a single S3 bucket located in the Management (Payer) account.","In the CloudWatch Logs of the region they occurred in.","On the local disk of the EC2 instances."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You notice that an EC2 instance's CPU usage is 100%, but your CloudWatch Alarm didn't trigger. You see the alarm is in the OK state. What is the most likely reason?",o:["The metric is delayed by 24 hours.","The alarm is monitoring the wrong Dimension (e.g., a different InstanceID).","The instance is in a private subnet.","CloudWatch does not support 100% CPU monitoring."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to perform Log Aggregation for your application running on multiple EC2 instances and search for specific error codes across all servers. Which service is best?",o:["CloudTrail","CloudWatch Logs (using Log Groups)","AWS Config","Amazon Inspector"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"Which feature of CloudWatch allows you to see a Top 10 list of the most expensive EC2 instances in real-time?",o:["Alarms","Metrics","CloudWatch Metrics Insights","CloudWatch Logs"],a:2},
+  {s:"Module 2: Monitoring & Management",q:"You have a CloudWatch Alarm that triggers a Scale Out action for an Auto Scaling Group. The alarm is in ALARM state, but no new instances are being launched. What should you check?",o:["The CloudWatch Metric granularity.","The IAM Role/Permissions of the Auto Scaling Group.","The S3 Bucket Policy.","The Billing Console."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You want to visualize the relationship between different microservices and identify where bottlenecks are occurring. Which service provides a Service Map?",o:["AWS CloudTrail","AWS X-Ray","Amazon Inspector","Amazon Macie"],a:1},
+  {s:"Module 2: Monitoring & Management",q:"In CloudWatch, what is a Namespace?",o:["A type of IAM user.","A container for CloudWatch metrics (e.g., AWS/EC2, AWS/S3).","A region in the AWS global infrastructure.","A billing tag."],a:1},
+  {s:"Module 2: Monitoring & Management",q:"You need to monitor how many times your website's Order Now button is clicked. This is not a standard AWS metric. What should you create?",o:["A CloudTrail log.","A CloudWatch Alarm.","A Custom Metric.","A Trusted Advisor check."],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"A startup wants to consolidate the billing of 10 different AWS accounts to get volume discounts. What should they use?",o:["AWS Cost Explorer","AWS Organizations","AWS Budgets","AWS Trusted Advisor"],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You are planning to launch a new application and need to estimate the monthly cost of 5 EC2 instances and 1 RDS database. Which tool is best?",o:["Cost Explorer","TCO Calculator","AWS Pricing Calculator","AWS Budgets"],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"You want to see a visual graph of your AWS spending patterns over the last 6 months to identify which service is the most expensive. Which tool do you use?",o:["AWS Cost Explorer","AWS Pricing Calculator","AWS CloudTrail","AWS Marketplace"],a:0},
+  {s:"Module 3: AWS Pricing & Support",q:"A user is on the AWS Free Tier. They run an EC2 t2.micro instance for 750 hours in a month. Will they be charged?",o:["No, it falls within the 750 hours/month limit.","Yes, because they used it for more than 24 hours.","No, because all EC2 instances are free for the first year.","Yes, if they use more than 1 GB of RAM."],a:0},
+  {s:"Module 3: AWS Pricing & Support",q:"A company needs a dedicated AWS technical account manager (TAM) to provide proactive guidance. Which support plan must they subscribe to?",o:["Basic","Developer","Business","Enterprise"],a:3},
+  {s:"Module 3: AWS Pricing & Support",q:"You have a steady, predictable workload that will run 24/7 for the next 3 years. Which pricing model offers the highest discount (up to 72%)?",o:["On-Demand Instances","Reserved Instances (or Savings Plans)","Spot Instances","Dedicated Hosts"],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You are performing a Price Comparison between keeping your servers in your own data center versus moving to AWS. Which tool helps with this?",o:["Pricing Calculator","Migration Evaluator (formerly TCO Calculator)","Cost Explorer","Trusted Advisor"],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"Which AWS service provides Best Practice recommendations to help you reduce costs, increase performance, and improve security?",o:["Inspector","Trusted Advisor","CloudWatch","Shield"],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You are using the AWS Free Tier. You exceed the 5GB storage limit for Amazon S3. What happens?",o:["Your account is suspended.","Your files are deleted.","You are charged standard S3 rates for the additional GBs used.","Nothing, as the Free Tier is unlimited for students."],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"You are using the AWS Pricing Calculator to estimate costs for a new project. You select On-Demand for the first year and Reserved for the second. Why would you do this?",o:["Reserved Instances are only available after the first year.","To use On-Demand while the workload is unpredictable, then switch to Reserved once the baseline usage is known.","Because the Pricing Calculator doesn't support Reserved Instances initially.","To save money on the first year's data transfer."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"A company has three AWS accounts. Account A has an unused Reserved Instance (RI). Account B is running an identical On-Demand instance. Under Consolidated Billing, what happens?",o:["Account B pays full price; RI is wasted.","The RI discount from Account A is automatically applied to Account B's instance.","Account A gets a refund for the RI.","Both accounts are charged double for cross-account usage."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You need to find out which specific IAM user launched an expensive p3.16xlarge instance that spiked your bill. Which service is the single source of truth for this?",o:["AWS Budgets","AWS Cost Explorer","AWS CloudTrail","AWS Trusted Advisor"],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"You are on the Basic Support Plan. You have a production-down emergency. Can you open a technical support case?",o:["Yes, for a one-time fee of $50.","No, Basic support only covers billing and account limit increases.","Yes, but only via Chat.","Yes, but the response time is 24 hours."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You want to track the costs of different departments (e.g., Marketing vs. Engineering) within a single AWS account. What is the most effective way to do this?",o:["Create separate VPCs for each department.","Use Cost Allocation Tags.","Open separate AWS accounts for each department.","Use different IAM Roles."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You have set up a Billing Alarm in CloudWatch to trigger at $100. Where must this alarm be created regardless of where your resources are located?",o:["In every region where you have an EC2 instance.","In the US East (N. Virginia) region.","In the region where your credit card is registered.","In the AWS Organizations management account only."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"Which feature of AWS Organizations allows you to receive a single, combined invoice for all your member accounts?",o:["Volume Discounting","Consolidated Billing","Service Control Policies","AWS Cost and Usage Report"],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"A company wants to use a Pay-as-you-go model but is worried about sudden spikes. Which tool provides a forecast of what their bill will be at the end of the month?",o:["AWS Cost Explorer","AWS Trusted Advisor","AWS CloudTrail","AWS Pricing Calculator"],a:0},
+  {s:"Module 3: AWS Pricing & Support",q:"You are using Spot Instances for a batch processing job. The current Spot price rises above your maximum bid. What happens to your instance?",o:["You are charged the new higher price automatically.","The instance is terminated (or stopped) by AWS after a 2-minute warning.","The instance continues to run for free until the price drops.","AWS moves the instance to On-Demand pricing."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"A company has a legacy application that must run on a specific physical server to comply with licensing requirements. Which EC2 tenancy should they choose?",o:["Shared Tenancy","Dedicated Instance","Dedicated Host","Spot Instance"],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"You need help with a complex architectural design for a multi-region deployment. Which support plan includes access to Infrastructure Event Management (IEM)?",o:["Basic","Developer","Business (Available for additional fee)","Enterprise (Included)"],a:3},
+  {s:"Module 3: AWS Pricing & Support",q:"You are using the AWS Pricing Calculator. You notice that data transfer into S3 from the internet is $0.00. Is this correct?",o:["Yes, inbound data transfer from the internet is generally free.","No, it costs $0.09 per GB.","Yes, but only for the first 5GB.","No, it depends on the region."],a:0},
+  {s:"Module 3: AWS Pricing & Support",q:"Which tool helps you identify Idle Load Balancers that are costing you money but not serving any traffic?",o:["CloudTrail","Cost Explorer","Trusted Advisor","Pricing Calculator"],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"A user wants to receive a text message (SMS) if their AWS usage hits 50% of their monthly budget. Which service combination is required?",o:["CloudWatch + CloudTrail","AWS Budgets + Amazon SNS","Cost Explorer + IAM","Trusted Advisor + SNS"],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You have a web application running on an EC2 t2.micro instance. You decide to add an Elastic IP to ensure the public IP doesn't change on reboot. When will you incur a charge for this Elastic IP?",o:["Always, Elastic IPs are a premium feature.","Only when the instance is running.","When the Elastic IP is allocated but the instance is Stopped.","Never, as long as you stay under 5 IPs."],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"A user is within their first 12 months of the AWS Free Tier. They store 10GB of data in S3 Standard. How much of this storage is covered by the Free Tier?",o:["All 10GB.","5GB (The user will pay for the remaining 5GB).","0GB, S3 is only free for the first month.","750MB."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You are using AWS Lambda for a small project. You have 500,000 requests per month. Will this cost you money under the Free Tier?",o:["No, the Lambda Free Tier is Always Free for up to 1 million requests per month.","Yes, after the first 12 months.","Yes, if the execution time is more than 1 second.","No, but only in the us-east-1 region."],a:0},
+  {s:"Module 3: AWS Pricing & Support",q:"You are comparing the cost of running a database on Amazon RDS versus on an Amazon EC2 instance. Which of the following is a cost unique to RDS?",o:["Storage cost (EBS).","Data transfer out to the internet.","Managed service premium for automated backups and patching.","Hourly instance charge."],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"You have 10TB of archival data that you only need to access once every two years. Which S3 storage class is the most cost-effective?",o:["S3 Standard","S3 Standard-IA (Infrequent Access)","S3 Glacier Deep Archive","S3 One Zone-IA"],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"Which AWS service offers a Free Tier that includes 25 GB of storage and 25 provisioned Write/Read capacity units every month Always Free?",o:["Amazon RDS","Amazon S3","Amazon DynamoDB","Amazon Redshift"],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"You want to purchase a Savings Plan for your compute usage. Which of the following does a Compute Savings Plan apply to?",o:["Only EC2 instances.","EC2 instances, AWS Lambda, and AWS Fargate.","Only S3 and RDS.","Only Dedicated Hosts."],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"A company is moving a massive 100TB database to AWS and is worried about the time it will take over the internet. Which service should they use for a dedicated, high-speed connection?",o:["AWS Snowball","Amazon VPC","AWS Direct Connect","AWS Site-to-Site VPN"],a:2},
+  {s:"Module 3: AWS Pricing & Support",q:"You want to find out if you can save money by switching from S3 Standard to S3 Intelligent-Tiering. Which tool analyzes your S3 access patterns and gives you this advice?",o:["AWS Pricing Calculator","S3 Storage Class Analysis (or Trusted Advisor)","CloudTrail","Cost Explorer"],a:1},
+  {s:"Module 3: AWS Pricing & Support",q:"You are on the Business Support Plan. What is the guaranteed response time for a System Impaired (non-production) case?",o:["15 minutes","1 hour","12 hours","24 hours"],a:2},
+  {s:"Domain 1: Cloud Concepts",q:"Which of the following is an advantage of cloud computing over on-premises?",o:["Manual management of all hardware","Trade capital expense for variable expense","Fixed capacity for better planning","Increased time-to-market"],a:1},
+  {s:"Domain 1: Cloud Concepts",q:"Which cloud attribute allows you to automatically increase or decrease resources based on demand?",o:["High Availability","Elasticity","Reliability","Fault Tolerance"],a:1},
+  {s:"Domain 1: Cloud Concepts",q:"What is the term for deploying resources in multiple geographically distant locations?",o:["Multi-AZ","Multi-Region","Edge Locations","Subnets"],a:1},
+  {s:"Domain 1: Cloud Concepts",q:"Which pillar of the AWS Well-Architected Framework focuses on using resources effectively to meet requirements?",o:["Security","Reliability","Performance Efficiency","Operational Excellence"],a:2},
+  {s:"Domain 1: Cloud Concepts",q:"Which model represents the concept of Infrastructure as a Service (IaaS)?",o:["Amazon EC2","AWS Lambda","Amazon S3","AWS Elastic Beanstalk"],a:0},
+  {s:"Domain 1: Cloud Concepts",q:"A company is moving its workload to AWS to take advantage of the ability to deploy resources globally in minutes. Which cloud benefit does this describe?",o:["Elasticity","High Availability","Global Reach","Pay-as-you-go pricing"],a:2},
+  {s:"Domain 1: Cloud Concepts",q:"You are explaining to a client why they should use the cloud instead of buying their own hardware. You mention that AWS's massive scale leads to lower prices for them. Which concept are you describing?",o:["Agility","Economies of Scale","Vertical Scaling","Fault Tolerance"],a:1},
+  {s:"Domain 1: Cloud Concepts",q:"A startup needs to launch a new application but doesn't know how much traffic it will get. They want a system that adds more servers when traffic is high and removes them when it's low. This is called:",o:["Reliability","Sustainability","Elasticity","Performance Efficiency"],a:2},
+  {s:"Domain 2: Security & Compliance",q:"In the Shared Responsibility Model, what is AWS responsible for?",o:["Managing IAM users","Patching the Guest OS","Physical security of data centers","Configuring Security Groups"],a:2},
+  {s:"Domain 2: Security & Compliance",q:"Which service is used to manage user permissions and access to AWS resources?",o:["AWS Shield","Amazon Inspector","AWS IAM","AWS KMS"],a:2},
+  {s:"Domain 2: Security & Compliance",q:"Which AWS service provides a one-stop shop for compliance-related reports?",o:["AWS Trusted Advisor","AWS Artifact","AWS Security Hub","Amazon Macie"],a:1},
+  {s:"Domain 2: Security & Compliance",q:"What is the best way to protect your Root User account?",o:["Share the password with another admin","Use the Root user for daily tasks","Enable Multi-Factor Authentication (MFA)","Create an Access Key for it"],a:2},
+  {s:"Domain 2: Security & Compliance",q:"Which service automatically discovers, classifies, and protects sensitive data in S3?",o:["Amazon GuardDuty","Amazon Macie","AWS WAF","AWS Shield"],a:1},
+  {s:"Domain 2: Security & Compliance",q:"A developer needs to access an S3 bucket from an EC2 instance. What is the AWS best practice for granting this permission?",o:["Hardcode IAM user credentials into the application code.","Share the Root user's Access Keys with the developer.","Assign an IAM Role to the EC2 instance.","Make the S3 bucket public."],a:2},
+  {s:"Domain 2: Security & Compliance",q:"Your company needs a report to prove to auditors that the AWS infrastructure is HIPAA compliant. Where should you look?",o:["AWS Trusted Advisor","AWS Artifact","AWS Shield","Amazon Inspector"],a:1},
+  {s:"Domain 2: Security & Compliance",q:"A company wants to protect its web application from common web exploits like SQL injection. Which service should they use?",o:["AWS Shield","AWS WAF (Web Application Firewall)","AWS KMS","Amazon GuardDuty"],a:1},
+  {s:"Domain 2: Security & Compliance",q:"Who is responsible for patching the physical servers that run Amazon EC2, according to the Shared Responsibility Model?",o:["AWS","The Customer","Both AWS and the Customer","The Operating System vendor"],a:0},
+  {s:"Domain 3: Technology & Services",q:"Which AWS service is a managed Relational Database Service?",o:["Amazon DynamoDB","Amazon RDS","Amazon Redshift","Amazon ElastiCache"],a:1},
+  {s:"Domain 3: Technology & Services",q:"Which service is primarily used for object storage?",o:["Amazon EBS","Amazon EFS","Amazon S3","Amazon SQS"],a:2},
+  {s:"Domain 3: Technology & Services",q:"What is the AWS serverless compute service that runs code in response to events?",o:["Amazon EC2","AWS Lambda","AWS Fargate","Amazon Lightsail"],a:1},
+  {s:"Domain 3: Technology & Services",q:"Which service allows you to create a virtual network in the cloud?",o:["AWS Direct Connect","Amazon Route 53","Amazon VPC","AWS VPN"],a:2},
+  {s:"Domain 3: Technology & Services",q:"What is the purpose of Amazon CloudFront?",o:["To host databases","Content Delivery Network (CDN) for low-latency delivery","Domain Name System (DNS) management","Load balancing traffic"],a:1},
+  {s:"Domain 3: Technology & Services",q:"You need to store data in a way that multiple EC2 instances can access and share the same files simultaneously. Which service is best?",o:["Amazon EBS","Amazon S3","Amazon EFS (Elastic File System)","Amazon Instance Store"],a:2},
+  {s:"Domain 3: Technology & Services",q:"You want to run a simple Docker container without managing any underlying virtual machines. Which service provides this serverless container experience?",o:["Amazon ECS","Amazon EKS","AWS Fargate","Amazon Lightsail"],a:2},
+  {s:"Domain 3: Technology & Services",q:"A company wants to migrate their on-premises Oracle database to Amazon Aurora with minimal downtime. Which service should they use?",o:["AWS Snowball","AWS DataSync","AWS DMS (Database Migration Service)","AWS Backup"],a:2},
+  {s:"Domain 3: Technology & Services",q:"Which service acts as a Content Delivery Network (CDN) to deliver videos and images to users with low latency?",o:["Amazon Route 53","Amazon CloudFront","AWS Direct Connect","AWS Global Accelerator"],a:1},
+  {s:"Domain 3: Technology & Services",q:"You want to receive an email notification whenever your EC2 instance's CPU usage stays above 80% for more than 5 minutes. Which service enables this?",o:["AWS CloudTrail","Amazon CloudWatch","AWS Config","Amazon Inspector"],a:1},
+  {s:"Domain 4: Billing & Pricing",q:"Which pricing model offers the deepest discount for long-term (1-3 year) commitments?",o:["On-Demand","Spot Instances","Reserved Instances","Dedicated Hosts"],a:2},
+  {s:"Domain 4: Billing & Pricing",q:"Which tool allows you to set alerts when your costs exceed a specific threshold?",o:["AWS Cost Explorer","AWS Budgets","AWS Trusted Advisor","AWS Pricing Calculator"],a:1},
+  {s:"Domain 4: Billing & Pricing",q:"What is the primary benefit of the AWS Free Tier?",o:["Allows users to explore services at no cost within certain limits","Provides free enterprise-level support","Gives free unlimited storage for 1 year","Offers 50% off all certifications"],a:0},
+  {s:"Domain 4: Billing & Pricing",q:"Which support plan includes access to a Technical Account Manager (TAM)?",o:["Developer","Business","Enterprise","Basic"],a:2},
+  {s:"Domain 4: Billing & Pricing",q:"Which service helps you visualize and manage your AWS spending patterns over time?",o:["AWS Cost Explorer","AWS Marketplace","AWS Systems Manager","AWS Config"],a:0},
+  {s:"General Knowledge & Troubleshooting",q:"You need to find out who terminated an EC2 instance yesterday. Which service provides this audit trail?",o:["Amazon CloudWatch","AWS CloudTrail","AWS Config","VPC Flow Logs"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"A company wants to run its own NoSQL database on EC2. According to the Shared Responsibility Model, whose responsibility is it to manage high availability for this database?",o:["The Customer","AWS","Both AWS and the Customer","The Database vendor"],a:0},
+  {s:"General Knowledge & Troubleshooting",q:"Which AWS service provides Best Practice recommendations in five categories: Cost Optimization, Security, Fault Tolerance, Performance, and Service Limits?",o:["AWS Inspector","AWS Trusted Advisor","Amazon Macie","AWS Security Hub"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"You want to purchase a domain name and manage its DNS records. Which AWS service do you use?",o:["Amazon CloudFront","Amazon VPC","Amazon Route 53","AWS Direct Connect"],a:2},
+  {s:"General Knowledge & Troubleshooting",q:"A developer wants a sandbox environment to quickly test a web application without configuring servers, networks, or databases. Which service is a Platform as a Service (PaaS) that handles this?",o:["Amazon EC2","AWS Elastic Beanstalk","AWS CloudFormation","AWS Outposts"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"Which AWS storage service is best for long-term data archiving where access is rare but costs must be kept extremely low?",o:["Amazon EBS","Amazon EFS","Amazon S3 Glacier","Amazon S3 Standard"],a:2},
+  {s:"General Knowledge & Troubleshooting",q:"A company needs to move 100 Terabytes of data from an on-premises data center to AWS but has a very slow internet connection. What should they use?",o:["AWS Direct Connect","AWS Snowball Edge","AWS DataSync","S3 Multipart Upload"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"You have a web application that needs to stay online even if an entire AWS Data Center fails. You should deploy it across multiple:",o:["Edge Locations","Availability Zones (AZs)","Regions","Subnets"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"Which AWS service provides a visual Service Map to help you identify performance bottlenecks in a microservices application?",o:["Amazon CloudWatch","AWS CloudTrail","AWS X-Ray","AWS Config"],a:2},
+  {s:"General Knowledge & Troubleshooting",q:"You want to ensure that your AWS account doesn't go over a $100 monthly limit. Which tool allows you to set a budget and receive alerts?",o:["AWS Cost Explorer","AWS Budgets","AWS Pricing Calculator","AWS Trusted Advisor"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"Which service uses Machine Learning to automatically discover and protect sensitive data (like credit card numbers) stored in S3?",o:["Amazon GuardDuty","Amazon Macie","Amazon Inspector","AWS Shield"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"You want to connect your office network to your AWS VPC using a secure, encrypted tunnel over the internet. You should use:",o:["AWS Direct Connect","AWS Site-to-Site VPN","VPC Peering","Amazon Route 53"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"Which pillar of the Well-Architected Framework focuses on the ability of a system to recover from service disruptions?",o:["Security","Reliability","Performance Efficiency","Operational Excellence"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"You want to use a NoSQL database that is schema-less and can handle millions of requests per second with low latency. Which service do you choose?",o:["Amazon RDS","Amazon DynamoDB","Amazon Aurora","Amazon Redshift"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"You are planning a new project and need to estimate the monthly cost of 5 EC2 instances and 1 RDS database. Which tool should you use?",o:["AWS Cost Explorer","AWS Pricing Calculator","AWS Budgets","AWS Trusted Advisor"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"A company has several AWS accounts for different departments. They want a single bill and the ability to share volume discounts across all accounts. They should use:",o:["IAM Groups","Consolidated Billing via AWS Organizations","Cost Allocation Tags","Resource Groups"],a:1},
+  {s:"General Knowledge & Troubleshooting",q:"You want to see a visual graph of your AWS spending patterns over the last 6 months to find out which service is costing the most. Which tool do you use?",o:["AWS Cost Explorer","AWS Budgets","AWS Marketplace","AWS Artifact"],a:0},
+  {s:"General Knowledge & Troubleshooting",q:"Which support plan provides access to a Technical Account Manager (TAM)?",o:["Developer","Business","Enterprise","Basic"],a:2},
+];
+
+const SECTIONS = [...new Set(ALL_QUESTIONS.map(q => q.s))];
+const SAVE_KEY = 'mlquiz_state_v3';
+const SETTINGS_KEY = 'mlquiz_settings_v1';
+
+let currentQuestions = [];
+let currentIdx = 0;
+let score = 0;
+let answered = false;
+let playerName = '';
+let playerAvatar = '🚀';
+let pendingMode = null;
+let streak = 0;
+let bestStreak = 0;
+let timerInterval = null;
+let timerLeft = 30;
+let bookmarks = [];
+let isLightTheme = false;
+let savedState = null;
+
+function saveState() {
+  if (!currentQuestions.length) return;
+  const state = { questions: currentQuestions.map(q => ALL_QUESTIONS.indexOf(q)), idx: currentIdx, score, streak, bestStreak, playerName, playerAvatar };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s.idx >= s.questions.length) { clearSave(); return null; }
+    return s;
+  } catch { return null; }
+}
+function clearSave() { localStorage.removeItem(SAVE_KEY); }
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    playerName = s.playerName || ''; playerAvatar = s.playerAvatar || '🚀';
+    bookmarks = s.bookmarks || []; bestStreak = s.bestStreak || 0;
+    isLightTheme = s.theme === 'light';
+    if (isLightTheme) { document.body.classList.add('light'); document.getElementById('themeBtn').textContent = '☀️'; }
+  } catch {}
+}
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({ playerName, playerAvatar, bookmarks, bestStreak, theme: isLightTheme ? 'light' : 'dark' }));
+}
+
+// Particles
+(function buildParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() < 0.5 ? 1.5 : 2.5;
+    p.style.cssText = `left:${Math.random()*100}%;width:${size}px;height:${size}px;--dur:${10+Math.random()*16}s;--delay:${Math.random()*12}s;--drift:${(Math.random()-0.5)*70}px;background:${Math.random()<0.5?'#8b5cf6':'#22d3ee'};`;
+    container.appendChild(p);
+  }
+})();
+
+function toggleTheme() {
+  isLightTheme = !isLightTheme;
+  document.body.classList.toggle('light', isLightTheme);
+  document.getElementById('themeBtn').textContent = isLightTheme ? '☀️' : '🌙';
+  saveSettings();
+}
+function showToast(msg, dur = 2000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function initHero() {
+  document.getElementById('heroStreak').textContent = bestStreak;
+  savedState = loadState();
+  showScreen(playerName ? 'hero' : 'nameInput');
+}
+
+function selectAvatar(el) {
+  document.querySelectorAll('.avatar-opt').forEach(a => a.classList.remove('chosen'));
+  el.classList.add('chosen'); playerAvatar = el.dataset.emoji;
+}
+function confirmName() {
+  const val = document.getElementById('playerNameInput').value.trim();
+  if (!val) {
+    const inp = document.getElementById('playerNameInput');
+    inp.style.borderColor = 'var(--wrong)'; inp.placeholder = 'Name cannot be empty!';
+    setTimeout(() => { inp.style.borderColor = 'var(--border)'; inp.placeholder = 'Enter your name…'; }, 1500);
+    return;
+  }
+  playerName = val; saveSettings(); showScreen('hero');
+}
+
+function showMainMenu() {
+  savedState = loadState();
+  const greeting = document.getElementById('menuGreeting');
+  greeting.textContent = `Welcome back, ${playerAvatar} ${playerName}!`;
+  const resumeCard = document.getElementById('resumeCard');
+  if (savedState && savedState.idx < savedState.questions.length) {
+    resumeCard.style.display = 'block';
+    document.getElementById('resumeDesc').textContent = `Q${savedState.idx+1} / ${savedState.questions.length} — Score: ${savedState.score}`;
+  } else { resumeCard.style.display = 'none'; }
+  const bmCount = bookmarks.length;
+  document.getElementById('bookmarkCountDesc').textContent = bmCount ? `${bmCount} question${bmCount!==1?'s':''} saved` : 'No bookmarks yet';
+  showScreen('mainMenu');
+}
+
+document.getElementById('hero').querySelector('.btn').addEventListener('click', showMainMenu);
+
+function resumeQuiz() {
+  if (!savedState) return;
+  currentQuestions = savedState.questions.map(i => ALL_QUESTIONS[i]);
+  currentIdx = savedState.idx; score = savedState.score;
+  streak = savedState.streak || 0; bestStreak = savedState.bestStreak || 0;
+  showScreen('quiz'); renderQuestion();
+}
+function goToName(mode) {
+  pendingMode = mode;
+  if (playerName) { if (mode === 'all') startAll(); else showSelect(); }
+  else showScreen('nameInput');
+}
+function showSelect() { buildSectionGrid(); showScreen('select'); }
+function buildSectionGrid() {
+  const grid = document.getElementById('sectionGrid');
+  grid.innerHTML = '';
+  SECTIONS.forEach((sec, i) => {
+    const count = ALL_QUESTIONS.filter(q => q.s === sec).length;
+    const card = document.createElement('div');
+    card.className = 'section-card selected'; card.dataset.sec = sec;
+    card.onclick = () => card.classList.toggle('selected');
+    card.innerHTML = `<div class="sec-num">Section ${i+1}</div><div class="sec-name">${sec}</div><div class="sec-count">${count} questions</div>`;
+    grid.appendChild(card);
+  });
+}
+function toggleAll() {
+  const cards = document.querySelectorAll('.section-card');
+  const allSel = [...cards].every(c => c.classList.contains('selected'));
+  cards.forEach(c => allSel ? c.classList.remove('selected') : c.classList.add('selected'));
+}
+function startAll() { clearSave(); currentQuestions = shuffle([...ALL_QUESTIONS]); beginQuiz(); }
+function startSelected() {
+  const selected = [...document.querySelectorAll('.section-card.selected')].map(c => c.dataset.sec);
+  if (!selected.length) { showToast('⚠️ Select at least one section!'); return; }
+  clearSave(); currentQuestions = shuffle(ALL_QUESTIONS.filter(q => selected.includes(q.s))); beginQuiz();
+}
+function beginQuiz() { currentIdx = 0; score = 0; streak = 0; showScreen('quiz'); renderQuestion(); }
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Timer
+function startTimer() {
+  clearInterval(timerInterval); timerLeft = 30; updateTimerUI();
+  timerInterval = setInterval(() => { timerLeft--; updateTimerUI(); if (timerLeft <= 0) { clearInterval(timerInterval); onTimeout(); } }, 1000);
+}
+function updateTimerUI() {
+  const circ = 94.2; const offset = circ * (1 - timerLeft / 30);
+  const fill = document.getElementById('timerFill');
+  fill.style.strokeDashoffset = offset;
+  document.getElementById('timerNum').textContent = timerLeft;
+  if (timerLeft <= 10) fill.style.stroke = 'var(--wrong)';
+  else if (timerLeft <= 20) fill.style.stroke = 'var(--accent3)';
+  else fill.style.stroke = 'var(--accent2)';
+}
+function onTimeout() {
+  if (answered) return; answered = true; streak = 0; updateStreakUI();
+  const q = currentQuestions[currentIdx];
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b => b.disabled = true); btns[q.a].classList.add('correct');
+  const fb = document.getElementById('feedbackBar');
+  fb.className = 'feedback-bar wrong-fb show';
+  fb.innerHTML = `⏱ Time's up! The answer was: <strong>${q.o[q.a]}</strong>`;
+  saveState(); triggerAutoAdvance();
+}
+
+function renderQuestion() {
+  const q = currentQuestions[currentIdx]; answered = false;
+  document.getElementById('sectionLabel').textContent = q.s;
+  document.getElementById('qNum').textContent = currentIdx + 1;
+  document.getElementById('qTotal').textContent = currentQuestions.length;
+  document.getElementById('liveScore').textContent = score;
+  document.getElementById('questionNum').textContent = `Question ${currentIdx + 1}`;
+  document.getElementById('questionText').textContent = q.q;
+  document.getElementById('progressFill').style.width = `${(currentIdx / currentQuestions.length) * 100}%`;
+  document.getElementById('nextBtn').style.display = 'none';
+  const bm = document.getElementById('bookmarkBtn');
+  bm.classList.toggle('active', bookmarks.some(b => b.q === q.q));
+  const fb = document.getElementById('feedbackBar'); fb.className = 'feedback-bar'; fb.textContent = '';
+  const grid = document.getElementById('optionsGrid'); grid.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  q.o.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${letters[i]}</span><span>${opt}</span><div class="timeout-bar"></div>`;
+    btn.onclick = () => selectAnswer(i, q.a, q.o[q.a]);
+    grid.appendChild(btn);
+  });
+  updateStreakUI(); startTimer();
+}
+function updateStreakUI() {
+  const badge = document.getElementById('streakBadge');
+  document.getElementById('streakNum').textContent = streak;
+  badge.classList.toggle('hot', streak >= 3);
+}
+function selectAnswer(chosen, correct, correctText) {
+  if (answered) return; answered = true; clearInterval(timerInterval);
+  const btns = document.querySelectorAll('.option-btn'); btns.forEach(b => b.disabled = true);
+  const fb = document.getElementById('feedbackBar');
+  if (chosen === correct) {
+    score++; streak++; if (streak > bestStreak) bestStreak = streak;
+    btns[chosen].classList.add('correct');
+    fb.className = 'feedback-bar correct-fb show';
+    fb.innerHTML = streak >= 3 ? `✓ Correct! 🔥 ${streak} in a row!` : '✓ Correct! Well done.';
+  } else {
+    streak = 0; btns[chosen].classList.add('wrong'); btns[correct].classList.add('correct');
+    fb.className = 'feedback-bar wrong-fb show';
+    fb.innerHTML = `✗ Incorrect. The correct answer is: <strong>${correctText}</strong>`;
+  }
+  updateStreakUI(); document.getElementById('liveScore').textContent = score;
+  saveSettings(); saveState(); triggerAutoAdvance();
+}
+function nextQuestion() { currentIdx++; if (currentIdx >= currentQuestions.length) { showResults(); return; } renderQuestion(); saveState(); }
+function quitQuiz() { clearInterval(timerInterval); saveState(); showMainMenu(); }
+
+function toggleBookmark() {
+  const q = currentQuestions[currentIdx];
+  const idx = bookmarks.findIndex(b => b.q === q.q);
+  if (idx === -1) { bookmarks.push({ q: q.q, s: q.s, o: q.o, a: q.a }); document.getElementById('bookmarkBtn').classList.add('active'); showToast('🔖 Bookmarked!'); }
+  else { bookmarks.splice(idx, 1); document.getElementById('bookmarkBtn').classList.remove('active'); showToast('Bookmark removed'); }
+  saveSettings();
+}
+
+function showBookmarks() {
+  const list = document.getElementById('bookmarksList');
+  const startBtn = document.getElementById('startBookmarkBtn');
+  list.innerHTML = '';
+  if (!bookmarks.length) {
+    list.innerHTML = '<div class="bookmarks-empty">No bookmarks yet.<br>Tap 🔖 during a quiz to save questions for review.</div>';
+    startBtn.style.display = 'none';
+  } else {
+    startBtn.style.display = 'inline-flex';
+    bookmarks.forEach(bm => {
+      const div = document.createElement('div');
+      div.className = 'bookmark-item';
+      div.innerHTML = `<div class="bookmark-item-q">${bm.q}</div><div class="bookmark-item-sec">${bm.s}</div>`;
+      list.appendChild(div);
+    });
+  }
+  showScreen('bookmarks');
+}
+function startBookmarkQuiz() { if (!bookmarks.length) return; clearSave(); currentQuestions = shuffle([...bookmarks]); beginQuiz(); }
+
+function showResults() {
+  clearTimeout(autoAdvanceTimer); clearInterval(timerInterval); clearSave(); showScreen('results');
+  const total = currentQuestions.length;
+  const pct = Math.round((score / total) * 100);
+  saveToLeaderboard({ name: playerName, avatar: playerAvatar, score, total, pct, streak: bestStreak, date: new Date().toLocaleDateString() });
+  document.getElementById('resCorrect').textContent = score;
+  document.getElementById('resWrong').textContent = total - score;
+  document.getElementById('resTotal').textContent = total;
+  document.getElementById('resBestStreak').textContent = bestStreak;
+  const circumference = 2 * Math.PI * 70;
+  const ring = document.getElementById('ringFill');
+  const colors = pct >= 80 ? ['#10b981','#22d3ee'] : pct >= 50 ? ['#f59e0b','#fbbf24'] : ['#f43f5e','#fb7185'];
+  const svg = ring.closest('svg');
+  let defs = svg.querySelector('defs');
+  if (!defs) { defs = document.createElementNS('http://www.w3.org/2000/svg','defs'); svg.prepend(defs); }
+  defs.innerHTML = `<linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:${colors[0]}"/><stop offset="100%" style="stop-color:${colors[1]}"/></linearGradient>`;
+  ring.style.stroke = 'url(#rg)';
+  setTimeout(() => { ring.style.strokeDashoffset = circumference * (1 - pct / 100); }, 100);
+  document.getElementById('ringPct').textContent = pct + '%';
+  let grade, title, color;
+  if (pct >= 90) { grade = 'S'; title = 'Outstanding!'; color = '#f59e0b'; }
+  else if (pct >= 80) { grade = 'A'; title = 'Excellent Work!'; color = '#10b981'; }
+  else if (pct >= 70) { grade = 'B'; title = 'Good Job!'; color = '#22d3ee'; }
+  else if (pct >= 60) { grade = 'C'; title = 'Not Bad!'; color = '#a78bfa'; }
+  else if (pct >= 50) { grade = 'D'; title = 'Keep Practicing!'; color = '#f59e0b'; }
+  else { grade = 'F'; title = 'Keep Studying!'; color = '#f43f5e'; }
+  document.getElementById('resultTitle').textContent = title;
+  const badge = document.getElementById('gradeBadge');
+  badge.textContent = `Grade: ${grade}`;
+  badge.style.background = color + '22'; badge.style.border = `1px solid ${color}44`; badge.style.color = color;
+  document.getElementById('heroStreak').textContent = bestStreak; saveSettings();
+}
+function restartSame() { currentQuestions = shuffle([...currentQuestions]); beginQuiz(); }
+
+
+// ══ LEADERBOARD ══
+const LB_KEY = 'mlquiz_leaderboard_v1';
+function loadLeaderboard() {
+  try { return JSON.parse(localStorage.getItem(LB_KEY) || '[]'); } catch { return []; }
+}
+function saveToLeaderboard(entry) {
+  const lb = loadLeaderboard();
+  lb.push(entry);
+  lb.sort((a,b) => b.pct - a.pct || b.score - a.score || b.streak - a.streak);
+  localStorage.setItem(LB_KEY, JSON.stringify(lb.slice(0, 50)));
+}
+function clearLeaderboard() {
+  if (!confirm('Clear all leaderboard data?')) return;
+  localStorage.removeItem(LB_KEY);
+  openLeaderboard();
+  showToast('🗑️ Leaderboard cleared');
+}
+function openLeaderboard() {
+  const lb = loadLeaderboard();
+  const list = document.getElementById('lbList');
+  list.innerHTML = '';
+  if (!lb.length) {
+    list.innerHTML = '<div class="lb-empty">No scores yet.<br>Complete a quiz to appear here!</div>';
+  } else {
+    lb.forEach((entry, i) => {
+      const div = document.createElement('div');
+      const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+      const isMe = entry.name === playerName && entry.avatar === playerAvatar;
+      div.className = `lb-row ${rankClass} ${isMe ? 'is-me' : ''}`;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+      div.innerHTML = `
+        ${isMe ? '<div class="lb-you-badge">YOU</div>' : ''}
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-avatar">${entry.avatar}</div>
+        <div class="lb-name">${entry.name}</div>
+        <div class="lb-score-wrap">
+          <div class="lb-score">${entry.score}/${entry.total}</div>
+          <div class="lb-pct">${entry.pct}% · 🔥${entry.streak}</div>
+        </div>`;
+      list.appendChild(div);
+    });
+  }
+  showScreen('leaderboard');
+}
+
+// ══ AUTO-ADVANCE ══
+let autoAdvanceTimer = null;
+function triggerAutoAdvance() {
+  clearTimeout(autoAdvanceTimer);
+  autoAdvanceTimer = setTimeout(() => {
+    nextQuestion();
+  }, 1500);
+}
+
+// ══ LOADING SCREEN ══
+function hideLoading() {
+  const ls = document.getElementById('loadingScreen');
+  ls.classList.add('fade-out');
+  setTimeout(() => { ls.style.display = 'none'; }, 650);
+  // Show Three.js canvas
+  setTimeout(() => document.getElementById('threeCanvas').classList.add('visible'), 700);
+}
+
+// ══ THREE.JS ANIMATED BACKGROUND ══
+function initThreeJS() {
+  const canvas = document.getElementById('threeCanvas');
+  let scene, camera, renderer, objects = [], mouse = {x:0, y:0}, animId;
+  const isHero = () => document.getElementById('hero').classList.contains('active');
+
+  try {
+    const THREE = window.THREE;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.z = 20;
+    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+
+    // Ambient + Point lights
+    const amb = new THREE.AmbientLight(0x8b5cf6, 0.6);
+    scene.add(amb);
+    const pt1 = new THREE.PointLight(0x22d3ee, 1.5, 60);
+    pt1.position.set(10, 10, 10); scene.add(pt1);
+    const pt2 = new THREE.PointLight(0x8b5cf6, 1.2, 60);
+    pt2.position.set(-10, -8, 5); scene.add(pt2);
+    const pt3 = new THREE.PointLight(0xf59e0b, 0.8, 40);
+    pt3.position.set(0, 15, -5); scene.add(pt3);
+
+    const geoms = [
+      new THREE.IcosahedronGeometry(1, 0),
+      new THREE.OctahedronGeometry(1, 0),
+      new THREE.TetrahedronGeometry(1.2, 0),
+      new THREE.BoxGeometry(1.2, 1.2, 1.2),
+      new THREE.TorusGeometry(0.8, 0.25, 8, 12),
+    ];
+    const colors = [0x8b5cf6, 0x22d3ee, 0xf59e0b, 0xa855f7, 0x06b6d4, 0xfbbf24];
+
+    for (let i = 0; i < 22; i++) {
+      const geo = geoms[Math.floor(Math.random() * geoms.length)];
+      const mat = new THREE.MeshPhongMaterial({
+        color: colors[Math.floor(Math.random()*colors.length)],
+        transparent: true, opacity: 0.55 + Math.random()*0.3,
+        wireframe: Math.random() > 0.6,
+        shininess: 80,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(
+        (Math.random()-0.5)*38,
+        (Math.random()-0.5)*28,
+        (Math.random()-0.5)*14
+      );
+      mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+      const s = 0.35 + Math.random()*0.9;
+      mesh.scale.setScalar(s);
+      mesh.userData = {
+        rotX: (Math.random()-0.5)*0.008,
+        rotY: (Math.random()-0.5)*0.012,
+        rotZ: (Math.random()-0.5)*0.006,
+        floatY: Math.random()*Math.PI*2,
+        floatSpeed: 0.003 + Math.random()*0.004,
+        initY: mesh.position.y,
+        floatAmp: 0.4 + Math.random()*0.6,
+      };
+      scene.add(mesh);
+      objects.push(mesh);
+    }
+
+    window.addEventListener('mousemove', e => {
+      mouse.x = (e.clientX/window.innerWidth - 0.5)*2;
+      mouse.y = -(e.clientY/window.innerHeight - 0.5)*2;
+    });
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      animId = requestAnimationFrame(animate);
+      const active = document.getElementById('hero').classList.contains('active') ||
+                     document.getElementById('mainMenu').classList.contains('active');
+      canvas.style.opacity = active ? '1' : '0';
+      objects.forEach(m => {
+        m.rotation.x += m.userData.rotX;
+        m.rotation.y += m.userData.rotY;
+        m.rotation.z += m.userData.rotZ;
+        m.userData.floatY += m.userData.floatSpeed;
+        m.position.y = m.userData.initY + Math.sin(m.userData.floatY)*m.userData.floatAmp;
+      });
+      // Gentle camera parallax
+      camera.position.x += (mouse.x * 2 - camera.position.x) * 0.02;
+      camera.position.y += (mouse.y * 1.5 - camera.position.y) * 0.02;
+      camera.lookAt(scene.position);
+      renderer.render(scene, camera);
+    }
+    animate();
+  } catch(e) {
+    console.warn('Three.js init failed:', e);
+  }
+}
+
+
+loadSettings();
+// Start loading screen
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(hideLoading, 2400);
+});
+
+// Load Three.js then init
+(function loadThree() {
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  s.onload = () => setTimeout(initThreeJS, 100);
+  document.head.appendChild(s);
+})();
+
+initHero();
+</script>
+</body>
+</html>
