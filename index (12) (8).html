@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Question Bank — Instant Search</title>
+<style>
+  :root{
+    --bg1:#0f0c29;
+    --bg2:#302b63;
+    --bg3:#24243e;
+    --glass:rgba(255,255,255,0.07);
+    --glass-border:rgba(255,255,255,0.14);
+    --text:#f1f1f6;
+    --muted:#a8a8c0;
+    --accent:#7c8cff;
+    --accent2:#8effc7;
+    --danger:#ff6b81;
+    --shadow:0 8px 32px rgba(0,0,0,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2) 50%,var(--bg3));
+    background-attachment:fixed;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+  }
+  body{min-height:100vh; display:flex; flex-direction:column;}
+
+  /* subtle animated glow blobs */
+  .blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:0.35;z-index:0;pointer-events:none;}
+  .blob1{width:400px;height:400px;background:#7c8cff;top:-120px;left:-100px;animation:float1 14s ease-in-out infinite;}
+  .blob2{width:350px;height:350px;background:#8effc7;bottom:-100px;right:-80px;animation:float2 16s ease-in-out infinite;}
+  @keyframes float1{0%,100%{transform:translate(0,0);}50%{transform:translate(40px,60px);}}
+  @keyframes float2{0%,100%{transform:translate(0,0);}50%{transform:translate(-50px,-40px);}}
+
+  header{
+    position:sticky; top:0; z-index:20;
+    backdrop-filter:blur(18px) saturate(160%);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    background:rgba(20,18,45,0.55);
+    border-bottom:1px solid var(--glass-border);
+    padding:18px 20px 16px;
+  }
+  .header-inner{max-width:900px;margin:0 auto;}
+  h1{
+    margin:0 0 4px;
+    font-size:1.5rem;
+    font-weight:700;
+    letter-spacing:0.3px;
+    background:linear-gradient(90deg,var(--accent2),var(--accent));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .subtitle{color:var(--muted);font-size:0.85rem;margin-bottom:14px;}
+
+  .search-wrap{position:relative;}
+  .search-box{
+    width:100%;
+    padding:16px 52px 16px 20px;
+    font-size:1.05rem;
+    border-radius:18px;
+    border:1px solid var(--glass-border);
+    background:var(--glass);
+    color:var(--text);
+    outline:none;
+    transition:border 0.25s, box-shadow 0.25s, background 0.25s;
+    box-shadow:var(--shadow);
+  }
+  .search-box::placeholder{color:var(--muted);}
+  .search-box:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(124,140,255,0.18), var(--shadow);
+    background:rgba(255,255,255,0.1);
+  }
+  .clear-btn{
+    position:absolute;
+    right:14px; top:50%; transform:translateY(-50%);
+    background:transparent; border:none; color:var(--muted);
+    font-size:1.3rem; cursor:pointer; display:none;
+    width:32px;height:32px;border-radius:50%;
+    transition:background 0.2s, color 0.2s;
+    line-height:1;
+  }
+  .clear-btn:hover{background:rgba(255,255,255,0.1); color:var(--text);}
+
+  .meta-row{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:10px; font-size:0.8rem; color:var(--muted);
+    flex-wrap:wrap; gap:8px;
+  }
+  .kbd{
+    background:rgba(255,255,255,0.08);
+    border:1px solid var(--glass-border);
+    border-radius:6px;
+    padding:1px 6px;
+    font-family:monospace;
+    font-size:0.75rem;
+  }
+
+  .recent-dropdown{
+    position:absolute; left:0; right:0; top:calc(100% + 8px);
+    background:rgba(30,26,60,0.92);
+    backdrop-filter:blur(14px);
+    border:1px solid var(--glass-border);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    z-index:30;
+    display:none;
+    animation:fadeIn 0.15s ease;
+  }
+  .recent-dropdown.show{display:block;}
+  .recent-item{
+    padding:10px 16px;
+    font-size:0.9rem;
+    cursor:pointer;
+    color:var(--muted);
+    display:flex; align-items:center; gap:8px;
+    transition:background 0.15s, color 0.15s;
+  }
+  .recent-item:hover{background:rgba(255,255,255,0.08); color:var(--text);}
+  .recent-header{
+    padding:8px 16px; font-size:0.72rem; text-transform:uppercase;
+    letter-spacing:0.6px; color:var(--muted); opacity:0.7;
+    border-bottom:1px solid var(--glass-border);
+  }
+
+  main{
+    flex:1;
+    max-width:900px;
+    width:100%;
+    margin:0 auto;
+    padding:24px 20px 100px;
+    position:relative;
+    z-index:1;
+  }
+
+  .status-line{
+    color:var(--muted);
+    font-size:0.85rem;
+    margin:6px 2px 16px;
+    min-height:18px;
+  }
+
+  .results{display:flex;flex-direction:column;gap:16px;}
+
+  .card{
+    background:var(--glass);
+    border:1px solid var(--glass-border);
+    border-radius:18px;
+    padding:20px 22px;
+    box-shadow:var(--shadow);
+    backdrop-filter:blur(14px);
+    animation:slideUp 0.35s ease both;
+    transition:transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  }
+  .card:hover{
+    transform:translateY(-2px);
+    border-color:rgba(124,140,255,0.4);
+    box-shadow:0 12px 40px rgba(0,0,0,0.4);
+  }
+  @keyframes slideUp{
+    from{opacity:0; transform:translateY(14px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(-4px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  .card-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .qnum{
+    font-size:0.72rem;
+    color:var(--accent2);
+    font-weight:700;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    margin-bottom:6px;
+    opacity:0.85;
+  }
+  .question-text{
+    font-size:1.05rem;
+    line-height:1.5;
+    font-weight:600;
+    margin-bottom:12px;
+  }
+  .answer-block{
+    background:rgba(142,255,199,0.08);
+    border:1px solid rgba(142,255,199,0.25);
+    border-radius:12px;
+    padding:12px 16px;
+    font-size:0.98rem;
+    line-height:1.5;
+    color:#d9ffe9;
+  }
+  .answer-label{
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--accent2);
+    font-weight:700;
+    margin-bottom:4px;
+    display:block;
+  }
+  .explanation{
+    margin-top:8px;
+    font-size:0.85rem;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  mark{
+    background:rgba(124,140,255,0.45);
+    color:#fff;
+    border-radius:3px;
+    padding:0 2px;
+  }
+  .card-actions{
+    display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;
+  }
+  .action-btn{
+    background:rgba(255,255,255,0.06);
+    border:1px solid var(--glass-border);
+    color:var(--text);
+    padding:7px 14px;
+    border-radius:10px;
+    font-size:0.78rem;
+    cursor:pointer;
+    transition:background 0.2s, transform 0.1s, border-color 0.2s;
+    display:flex; align-items:center; gap:6px;
+  }
+  .action-btn:hover{background:rgba(124,140,255,0.2); border-color:var(--accent);}
+  .action-btn:active{transform:scale(0.96);}
+  .action-btn.copied{background:rgba(142,255,199,0.25); border-color:var(--accent2); color:#d9ffe9;}
+
+  .match-score{
+    font-size:0.7rem;
+    color:var(--muted);
+    background:rgba(255,255,255,0.06);
+    padding:3px 9px;
+    border-radius:20px;
+    white-space:nowrap;
+    border:1px solid var(--glass-border);
+  }
+  .match-score.exact{
+    color:#0f2a1a;
+    background:var(--accent2);
+    border-color:var(--accent2);
+    font-weight:700;
+  }
+
+  .no-results{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--muted);
+    font-size:1.1rem;
+    animation:fadeIn 0.3s ease;
+  }
+  .no-results .emoji{font-size:2.5rem; display:block; margin-bottom:12px;}
+
+  .empty-state{
+    text-align:center;
+    padding:70px 20px;
+    color:var(--muted);
+  }
+  .empty-state .emoji{font-size:3rem; display:block; margin-bottom:14px;}
+  .empty-state h3{color:var(--text); margin-bottom:6px; font-weight:600;}
+
+  .scroll-top{
+    position:fixed;
+    bottom:26px; right:26px;
+    width:48px; height:48px;
+    border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none;
+    color:#0f0c29;
+    font-size:1.3rem;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 6px 20px rgba(0,0,0,0.4);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:40;
+    transition:transform 0.2s, opacity 0.2s;
+  }
+  .scroll-top.show{display:flex; animation:fadeIn 0.25s ease;}
+  .scroll-top:hover{transform:translateY(-3px) scale(1.05);}
+
+  .searching-indicator{
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--accent2);
+    font-size:0.8rem;
+  }
+  .dot{
+    width:5px;height:5px;border-radius:50%;
+    background:var(--accent2);
+    animation:pulse 1s infinite ease-in-out;
+  }
+  .dot:nth-child(2){animation-delay:0.15s;}
+  .dot:nth-child(3){animation-delay:0.3s;}
+  @keyframes pulse{0%,100%{opacity:0.3;transform:scale(0.8);}50%{opacity:1;transform:scale(1.2);}}
+
+  ::-webkit-scrollbar{width:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(124,140,255,0.35); border-radius:10px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(124,140,255,0.55);}
+
+  @media (max-width:600px){
+    h1{font-size:1.25rem;}
+    .search-box{font-size:0.95rem; padding:14px 46px 14px 16px;}
+    .card{padding:16px;}
+    .question-text{font-size:0.98rem;}
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+
+<header>
+  <div class="header-inner">
+    <h1>⚡ Question Bank Search</h1>
+    <div class="subtitle">Instant offline search across your question dataset</div>
+    <div class="search-wrap">
+      <input
+        type="text"
+        id="searchBox"
+        class="search-box"
+        placeholder="Type or paste a question to search... (Ctrl+K)"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <button class="clear-btn" id="clearBtn" title="Clear (Esc)">×</button>
+      <div class="recent-dropdown" id="recentDropdown"></div>
+    </div>
+    <div class="meta-row">
+      <span id="totalCount">Loading questions...</span>
+      <span><span class="kbd">Ctrl</span>+<span class="kbd">K</span> to search &nbsp;·&nbsp; <span class="kbd">Enter</span> best match &nbsp;·&nbsp; <span class="kbd">Esc</span> clear</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="status-line" id="statusLine"></div>
+  <div class="results" id="results"></div>
+</main>
+
+<button class="scroll-top" id="scrollTopBtn" title="Scroll to top">↑</button>
+
+<script>
+/* ============================================================
+   EMBEDDED QUESTION DATASET
+   Extracted from uploaded PDF (Add-on_sem5.pdf)
+   Sections: Machine Learning Basics, AWS SageMaker/S3, AWS EC2
+   ============================================================ */
+const QUESTION_DATA = [
+  // ---------------- Machine Learning Basics ----------------
+  {q:"Machine Learning is a branch of which field?", a:"B. Artificial Intelligence"},
+  {q:"Which process allows computers to learn from data without being explicitly programmed for every task?", a:"C. Machine Learning"},
+  {q:"Which of the following is NOT mentioned as a common application of Machine Learning?", a:"D. Hardware Assembly"},
+  {q:"Why is Machine Learning important for modern businesses?", a:"A. It handles complex tasks traditional programming cannot."},
+  {q:"Gmail filtering spam emails automatically is an example of what?", a:"B. Automating repetitive tasks"},
+  {q:"What is the role of algorithms in Machine Learning?", a:"B. To provide mathematical methods that help machines find patterns."},
+  {q:"Which step in the learning process involves adjusting internal settings to better predict outcomes?", a:"B. Model Training"},
+  {q:'Which type of Machine Learning trains models on "labeled data"?', a:"C. Supervised Learning"},
+  {q:"What is the primary goal of Unsupervised Learning?", a:"B. To find hidden patterns or groups in unlabeled data."},
+  {q:"Which sub-category of Supervised Learning predicts categorical or discrete outputs like spam/non-spam?", a:"C. Classification"},
+  {q:"Regression algorithms are used to predict what kind of values?", a:"C. Continuous numerical values"},
+  {q:"Which of the following is a common technique for Clustering in Unsupervised Learning?", a:"B. K-Means"},
+  {q:"What technique discovers relationships between items in a dataset where the presence of one item implies another?", a:"B. Association Rule Learning"},
+  {q:"In Reinforcement Learning, how does the agent learn optimal actions?", a:"B. Through trial and error and feedback (rewards/penalties)."},
+  {q:"What is the first step in the Machine Learning Lifecycle?", a:"C. Problem Definition"},
+  {q:"Which lifecycle step involves addressing missing values, outliers, and inconsistencies?", a:"C. Data Cleaning and Preprocessing"},
+  {q:"What is the purpose of Exploratory Data Analysis (EDA)?", a:"B. To uncover hidden patterns and understand the dataset's structure."},
+  {q:"Which process involves selecting only relevant features to enhance model efficiency?", a:"B. Feature Engineering and Selection"},
+  {q:'Why is "Model Evaluation" necessary after training?', a:"B. To test the accuracy of the model on new, unseen data."},
+  {q:'What is the primary objective of the "Model Deployment" stage in the Machine Learning Lifecycle?', a:"C. To integrate the predictive model with existing systems for real-world use."},
+
+  // ---------------- Amazon SageMaker / S3 ----------------
+  {q:"What is Amazon SageMaker mainly used for?", a:"B. Building, training, and deploying machine learning models"},
+  {q:"Which AWS service is commonly used to store datasets for SageMaker?", a:"A. S3"},
+  {q:"What is the main purpose of Amazon S3?", a:"B. Object storage"},
+  {q:"In Amazon S3, data is stored inside what?", a:"B. Buckets"},
+  {q:"Which of the following can be stored in an S3 bucket?", a:"D. All of the above (CSV files, Images, Videos)"},
+  {q:"What does SageMaker Studio provide?", a:"A. A development environment"},
+  {q:"Which component is commonly used to write and run Python code in SageMaker Studio?", a:"C. Notebook"},
+  {q:"What is the purpose of a SageMaker notebook?", a:"A. To write and execute code"},
+  {q:"Which language is commonly used for machine learning notebooks in SageMaker?", a:"B. Python"},
+  {q:"What is the purpose of SageMaker built-in algorithms?", a:"A. To provide ready-to-use machine learning algorithms"},
+
+  // ---------------- Amazon EC2 ----------------
+  {
+    q:"What does Amazon EC2 provide?",
+    a:"A. Virtual servers in the cloud",
+    e:"EC2 stands for Elastic Compute Cloud. It lets you rent virtual computers (called instances) to run your own applications."
+  },
+  {
+    q:"Which of the following is a physical location with data centers inside an AWS Region?",
+    a:"B. Availability Zone (AZ)",
+    e:"An Availability Zone is a physical location that contains one or more distinct data centers. A Region is made up of multiple AZs."
+  },
+  {
+    q:"What is an AWS Region?",
+    a:"C. A geographic area",
+    e:"A Region is a physical, geographic location around the world (like US East or Europe West) where AWS groups its data centers."
+  },
+  {
+    q:"What is a Virtual Private Cloud (VPC)?",
+    a:"B. Your own isolated private network inside AWS",
+    e:"A VPC lets you launch AWS resources into a virtual network that you define. It looks and acts like a traditional network in your own data center."
+  },
+  {
+    q:"What acts as a virtual firewall for your EC2 instance to control traffic?",
+    a:"C. Security Group",
+    e:"A Security Group acts as a firewall for your EC2 instance. It controls the traffic that is allowed to enter or leave the instance."
+  },
+  {
+    q:"Can a single VPC span across multiple AWS Regions?",
+    a:"B. No, a VPC is strictly tied to a single Region.",
+    e:"A VPC lives inside one specific AWS Region. However, it can span across multiple Availability Zones inside that same Region."
+  },
+  {
+    q:"What is the default inbound traffic rule for a new custom Security Group?",
+    a:"B. It blocks all traffic from entering.",
+    e:"For safety, new security groups block all incoming traffic by default. You must manually add rules to allow specific traffic in."
+  },
+  {
+    q:"If you stop and start an EC2 instance, what happens to its standard Public IP address?",
+    a:"A. It changes to a new public IP address.",
+    e:"Standard public IP addresses are dynamic. When you stop an instance, AWS releases the IP. If you want a persistent IP address, you must use an Elastic IP."
+  },
+  {
+    q:"Why should you deploy EC2 instances in two different Availability Zones?",
+    a:"C. To keep your application running if one data center loses power.",
+    e:"Using multiple AZs provides high availability. If one AZ goes down due to a power outage or disaster, your application can still run from the other AZ."
+  },
+  {
+    q:'Security Groups are "stateful". What does this mean?',
+    a:"A. If you allow traffic in, the return traffic is automatically allowed out.",
+    e:"Stateful means that if an inbound request is allowed through the firewall, the response back to the user is automatically permitted, regardless of outbound rules."
+  }
+];
+
+/* ============================================================
+   SEARCH ENGINE
+   - Normalization (case/punctuation/whitespace insensitive)
+   - Token-based indexing for fast candidate lookup
+   - Fuzzy scoring using Levenshtein distance + token overlap
+   ============================================================ */
+
+// Normalize text: lowercase, strip punctuation, collapse whitespace
+function normalize(str){
+  return str
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')   // strip punctuation
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenize(str){
+  const norm = normalize(str);
+  return norm.length ? norm.split(' ') : [];
+}
+
+// Levenshtein distance (iterative, space-optimized)
+function levenshtein(a, b){
+  if(a === b) return 0;
+  const al = a.length, bl = b.length;
+  if(al === 0) return bl;
+  if(bl === 0) return al;
+  let prev = new Array(bl + 1);
+  let curr = new Array(bl + 1);
+  for(let j = 0; j <= bl; j++) prev[j] = j;
+  for(let i = 1; i <= al; i++){
+    curr[0] = i;
+    const ac = a.charCodeAt(i - 1);
+    for(let j = 1; j <= bl; j++){
+      const cost = ac === b.charCodeAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(
+        prev[j] + 1,      // deletion
+        curr[j - 1] + 1,  // insertion
+        prev[j - 1] + cost // substitution
+      );
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[bl];
+}
+
+// Pre-built index for the dataset
+const INDEX = QUESTION_DATA.map((item, idx) => {
+  const normQ = normalize(item.q);
+  const tokens = tokenize(item.q);
+  return {
+    idx,
+    question: item.q,
+    answer: item.a,
+    explanation: item.e || '',
+    normQ,
+    tokens,
+    tokenSet: new Set(tokens)
+  };
+});
+
+// Build an inverted token->questionIndices map for fast candidate narrowing
+const TOKEN_MAP = new Map();
+INDEX.forEach(entry => {
+  entry.tokenSet.forEach(tok => {
+    if(!TOKEN_MAP.has(tok)) TOKEN_MAP.set(tok, []);
+    TOKEN_MAP.get(tok).push(entry.idx);
+  });
+});
+
+// Score a query against a dataset entry
+// Combines: exact substring match, token overlap (Jaccard-ish), and
+// normalized Levenshtein similarity (handles typos / missing words)
+function scoreEntry(queryNorm, queryTokens, entry){
+  if(!queryNorm) return 0;
+
+  // Exact match gets max score
+  if(entry.normQ === queryNorm) return 1000;
+
+  let score = 0;
+
+  // Substring containment (partial matching) — strong signal
+  if(entry.normQ.includes(queryNorm)){
+    score += 400 + (queryNorm.length / entry.normQ.length) * 100;
+  } else if(queryNorm.includes(entry.normQ) && entry.normQ.length > 3){
+    score += 350;
+  }
+
+  // Token overlap (order-independent, handles missing/extra words)
+  if(queryTokens.length){
+    let overlap = 0;
+    for(const t of queryTokens){
+      if(entry.tokenSet.has(t)) overlap++;
+    }
+    const overlapRatio = overlap / queryTokens.length;
+    score += overlapRatio * 250;
+
+    // Coverage of the entry's own tokens (how much of the question is matched)
+    const coverage = overlap / entry.tokens.length;
+    score += coverage * 100;
+  }
+
+  // Fuzzy character-level similarity (typo tolerance) — only compute
+  // when lengths are reasonably close to keep it fast
+  const lenDiff = Math.abs(queryNorm.length - entry.normQ.length);
+  if(lenDiff < Math.max(queryNorm.length, entry.normQ.length) * 0.6){
+    const dist = levenshtein(queryNorm, entry.normQ);
+    const maxLen = Math.max(queryNorm.length, entry.normQ.length, 1);
+    const similarity = 1 - (dist / maxLen);
+    if(similarity > 0.4){
+      score += similarity * 200;
+    }
+  }
+
+  return score;
+}
+
+// Main search function — returns ranked results
+function search(query){
+  const queryNorm = normalize(query);
+  if(!queryNorm) return [];
+
+  const queryTokens = tokenize(query);
+
+  // Gather candidate set via token map (fast narrowing for large datasets)
+  const candidateIdxs = new Set();
+  queryTokens.forEach(tok => {
+    // exact token matches
+    if(TOKEN_MAP.has(tok)){
+      TOKEN_MAP.get(tok).forEach(i => candidateIdxs.add(i));
+    }
+    // prefix / fuzzy token matches for partial typing
+    for(const [mapTok, idxs] of TOKEN_MAP){
+      if(mapTok.startsWith(tok) || tok.startsWith(mapTok)){
+        idxs.forEach(i => candidateIdxs.add(i));
+      }
+    }
+  });
+
+  // If very short query or no token candidates, fall back to full scan
+  // (dataset is small enough that full scan is still instant; this also
+  // guarantees fuzzy/typo matches aren't missed)
+  const pool = candidateIdxs.size > 0 ? [...candidateIdxs] : INDEX.map(e => e.idx);
+  const scanPool = queryNorm.length <= 2 ? pool : INDEX.map(e => e.idx);
+
+  const results = [];
+  for(const i of scanPool){
+    const entry = INDEX[i];
+    const s = scoreEntry(queryNorm, queryTokens, entry);
+    if(s > 60){
+      results.push({entry, score: s});
+    }
+  }
+
+  results.sort((a, b) => b.score - a.score);
+  return results;
+}
+
+/* ============================================================
+   HIGHLIGHTING
+   ============================================================ */
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function highlightMatches(text, queryTokens){
+  if(!queryTokens.length) return escapeHtml(text);
+  // Build a regex from unique tokens (length >= 2) to avoid over-highlighting
+  const uniqueTokens = [...new Set(queryTokens.filter(t => t.length >= 2))];
+  if(!uniqueTokens.length) return escapeHtml(text);
+
+  const escaped = uniqueTokens
+    .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .sort((a,b) => b.length - a.length); // longer tokens first
+  const pattern = new RegExp('(' + escaped.join('|') + ')', 'gi');
+
+  return escapeHtml(text).replace(pattern, match => `<mark>${match}</mark>`);
+}
+
+/* ============================================================
+   UI LOGIC
+   ============================================================ */
+const searchBox = document.getElementById('searchBox');
+const clearBtn = document.getElementById('clearBtn');
+const resultsEl = document.getElementById('results');
+const statusLine = document.getElementById('statusLine');
+const totalCountEl = document.getElementById('totalCount');
+const recentDropdown = document.getElementById('recentDropdown');
+const scrollTopBtn = document.getElementById('scrollTopBtn');
+
+const HISTORY_KEY = 'qbank_search_history_v1';
+let currentResults = [];
+let searchTimer = null;
+let searchStartTime = 0;
+
+// Init total count
+totalCountEl.textContent = `${QUESTION_DATA.length} questions loaded — pre-indexed for instant search`;
+
+function getHistory(){
+  try{
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  }catch(e){ return []; }
+}
+
+function saveToHistory(term){
+  if(!term || !term.trim()) return;
+  let hist = getHistory();
+  hist = hist.filter(h => h.toLowerCase() !== term.toLowerCase());
+  hist.unshift(term);
+  hist = hist.slice(0, 10);
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(hist)); }catch(e){}
+}
+
+function renderRecentDropdown(){
+  const hist = getHistory();
+  if(!hist.length){
+    recentDropdown.classList.remove('show');
+    return;
+  }
+  recentDropdown.innerHTML = '<div class="recent-header">Recent Searches</div>' +
+    hist.map(h => `<div class="recent-item" data-term="${escapeHtml(h)}">🕘 ${escapeHtml(h)}</div>`).join('');
+  recentDropdown.classList.add('show');
+}
+
+recentDropdown.addEventListener('click', e => {
+  const item = e.target.closest('.recent-item');
+  if(item){
+    searchBox.value = item.dataset.term;
+    recentDropdown.classList.remove('show');
+    runSearch(item.dataset.term);
+    searchBox.focus();
+  }
+});
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('.search-wrap')){
+    recentDropdown.classList.remove('show');
+  }
+});
+
+function renderCard(result, index, queryTokens){
+  const { entry, score } = result;
+  const isExact = score >= 1000;
+  const scoreLabel = isExact ? 'Exact match' : `${Math.min(99, Math.round(score / 10))}% match`;
+
+  const explanationHtml = entry.explanation
+    ? `<div class="explanation">💡 ${escapeHtml(entry.explanation)}</div>`
+    : '';
+
+  return `
+    <div class="card" style="animation-delay:${Math.min(index * 40, 300)}ms" data-idx="${entry.idx}">
+      <div class="card-top">
+        <div style="flex:1;">
+          <div class="qnum">Question #${entry.idx + 1}</div>
+          <div class="question-text">${highlightMatches(entry.question, queryTokens)}</div>
+        </div>
+        <span class="match-score ${isExact ? 'exact' : ''}">${scoreLabel}</span>
+      </div>
+      <div class="answer-block">
+        <span class="answer-label">Correct Answer</span>
+        ${highlightMatches(entry.answer, queryTokens)}
+        ${explanationHtml}
+      </div>
+      <div class="card-actions">
+        <button class="action-btn copy-q-btn" data-idx="${entry.idx}">📋 Copy Question</button>
+        <button class="action-btn copy-a-btn" data-idx="${entry.idx}">✅ Copy Answer</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderResults(results, query){
+  const queryTokens = tokenize(query);
+  currentResults = results;
+
+  if(!query.trim()){
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <span class="emoji">🔍</span>
+        <h3>Start typing to search</h3>
+        <div>Search across ${QUESTION_DATA.length} questions instantly — no delay, no button needed.</div>
+      </div>`;
+    statusLine.textContent = '';
+    return;
+  }
+
+  if(!results.length){
+    resultsEl.innerHTML = `
+      <div class="no-results">
+        <span class="emoji">🤷</span>
+        No matching question found.
+      </div>`;
+    statusLine.textContent = `0 results for "${query}"`;
+    return;
+  }
+
+  resultsEl.innerHTML = results
+    .map((r, i) => renderCard(r, i, queryTokens))
+    .join('');
+
+  statusLine.textContent = `${results.length} result${results.length > 1 ? 's' : ''} found`;
+}
+
+function runSearch(query){
+  const start = performance.now();
+  searchStartTime = start;
+
+  // Show "Searching..." only if it takes longer than 100ms
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    if(performance.now() - start >= 100){
+      statusLine.innerHTML = `<span class="searching-indicator">Searching<span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`;
+    }
+  }, 100);
+
+  const results = search(query);
+  clearTimeout(searchTimer);
+  renderResults(results, query);
+}
+
+// Real-time search on input
+searchBox.addEventListener('input', () => {
+  const val = searchBox.value;
+  clearBtn.style.display = val ? 'block' : 'none';
+  recentDropdown.classList.remove('show');
+  runSearch(val);
+});
+
+// Clear button
+clearBtn.addEventListener('click', () => {
+  searchBox.value = '';
+  clearBtn.style.display = 'none';
+  renderResults([], '');
+  searchBox.focus();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
+    e.preventDefault();
+    searchBox.focus();
+    searchBox.select();
+  }
+});
+
+searchBox.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){
+    searchBox.value = '';
+    clearBtn.style.display = 'none';
+    recentDropdown.classList.remove('show');
+    renderResults([], '');
+  } else if(e.key === 'Enter'){
+    e.preventDefault();
+    const val = searchBox.value.trim();
+    if(val){
+      saveToHistory(val);
+      if(currentResults.length){
+        const topCard = resultsEl.querySelector('.card');
+        if(topCard){
+          topCard.scrollIntoView({behavior:'smooth', block:'center'});
+          topCard.style.borderColor = 'var(--accent2)';
+          setTimeout(() => { topCard.style.borderColor = ''; }, 900);
+        }
+      }
+    }
+  }
+});
+
+searchBox.addEventListener('focus', () => {
+  if(!searchBox.value.trim()) renderRecentDropdown();
+});
+
+// Copy buttons (event delegation)
+resultsEl.addEventListener('click', e => {
+  const copyQBtn = e.target.closest('.copy-q-btn');
+  const copyABtn = e.target.closest('.copy-a-btn');
+  if(copyQBtn){
+    const entry = INDEX[parseInt(copyQBtn.dataset.idx, 10)];
+    copyToClipboard(entry.question, copyQBtn, '📋 Copied!');
+  } else if(copyABtn){
+    const entry = INDEX[parseInt(copyABtn.dataset.idx, 10)];
+    copyToClipboard(entry.answer, copyABtn, '✅ Copied!');
+  }
+});
+
+function copyToClipboard(text, btn, label){
+  const finish = () => {
+    const original = btn.textContent;
+    btn.textContent = label;
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.classList.remove('copied');
+    }, 1200);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(finish).catch(() => fallbackCopy(text, finish));
+  } else {
+    fallbackCopy(text, finish);
+  }
+}
+
+function fallbackCopy(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  cb();
+}
+
+// Save history on blur (paste-and-forget scenarios)
+searchBox.addEventListener('blur', () => {
+  const val = searchBox.value.trim();
+  if(val) saveToHistory(val);
+});
+
+// Scroll-to-top button
+window.addEventListener('scroll', () => {
+  scrollTopBtn.classList.toggle('show', window.scrollY > 300);
+});
+scrollTopBtn.addEventListener('click', () => {
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+// Initial render + autofocus
+renderResults([], '');
+searchBox.focus();
+</script>
+</body>
+</html>
